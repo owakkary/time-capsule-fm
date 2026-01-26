@@ -1,0 +1,478 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Antiquarian Color Palette - Golden Brown Theme */
+    --color-parchment: #FAF6F0;
+    --color-parchment-dark: #F0EBE3;
+    --color-sepia: #5C4033;
+    --color-sepia-light: #8B7355;
+    --color-brass: #C9A66B;
+    --color-brass-light: #DBC9A0;
+    --color-brass-dark: #A6854A;
+    --color-burgundy: #722F37;
+    --color-burgundy-light: #A64D54;
+    --color-ink: #2C1810;
+    --color-ink-light: #4A3728;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-parchment text-ink;
+    background-image:
+      radial-gradient(ellipse at 20% 0%, rgba(201, 166, 107, 0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 100%, rgba(201, 166, 107, 0.04) 0%, transparent 50%),
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    background-blend-mode: normal, normal, soft-light;
+  }
+
+  ::selection {
+    @apply bg-brass/30 text-ink;
+  }
+}
+
+@layer components {
+  /* Typography */
+  .font-display {
+    font-family: var(--font-display), Georgia, serif;
+  }
+
+  .font-body {
+    font-family: var(--font-body), Georgia, serif;
+  }
+
+  /* Antiquarian Card */
+  .card-antiquarian {
+    @apply relative bg-parchment rounded-sm p-6;
+    border: 1px solid rgba(201, 166, 107, 0.3);
+    box-shadow:
+      0 1px 3px rgba(44, 24, 16, 0.06),
+      0 4px 12px rgba(44, 24, 16, 0.03),
+      inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .card-antiquarian:hover {
+    transform: translateY(-4px);
+    border-color: rgba(201, 166, 107, 0.5);
+    box-shadow:
+      0 4px 8px rgba(44, 24, 16, 0.08),
+      0 12px 32px rgba(44, 24, 16, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  }
+
+  /* Buttons */
+  .btn-primary {
+    @apply relative px-8 py-4 font-display text-lg font-semibold rounded-sm overflow-hidden;
+    background: linear-gradient(135deg, var(--color-brass-dark) 0%, var(--color-brass) 100%);
+    color: var(--color-parchment);
+    border: 1px solid rgba(166, 133, 74, 0.4);
+    box-shadow:
+      0 2px 4px rgba(44, 24, 16, 0.15),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      0 4px 12px rgba(166, 133, 74, 0.35),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+
+  .btn-primary:disabled {
+    @apply opacity-50 cursor-not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .btn-secondary {
+    @apply px-6 py-3 font-display font-medium text-sepia rounded-sm;
+    background: transparent;
+    border: 2px solid var(--color-brass);
+    transition: all 0.3s ease;
+  }
+
+  .btn-secondary:hover {
+    background: var(--color-brass);
+    color: var(--color-parchment);
+  }
+
+  /* Form Elements */
+  .input {
+    @apply w-full px-4 py-3 bg-parchment text-ink rounded-sm font-body;
+    border: 1px solid rgba(201, 166, 107, 0.4);
+    transition: all 0.3s ease;
+  }
+
+  .input:focus {
+    @apply outline-none;
+    border-color: var(--color-brass);
+    box-shadow: 0 0 0 3px rgba(201, 166, 107, 0.2);
+  }
+
+  /* Decorative Elements */
+  .divider-ornate {
+    @apply flex items-center justify-center gap-4 my-8;
+  }
+
+  .divider-ornate::before,
+  .divider-ornate::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--color-brass-light), transparent);
+  }
+
+  .divider-ornate-icon {
+    @apply text-brass text-xl;
+  }
+
+  /* Badge/Tag */
+  .tag-empire {
+    @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-sm font-medium;
+    background: rgba(201, 166, 107, 0.12);
+    border: 1px solid rgba(201, 166, 107, 0.25);
+    color: var(--color-sepia);
+    transition: all 0.2s ease;
+  }
+
+  .tag-empire:hover {
+    background: rgba(201, 166, 107, 0.2);
+    border-color: rgba(201, 166, 107, 0.4);
+  }
+
+  /* Stats Display */
+  .stats-display {
+    @apply inline-flex items-center gap-0 rounded-sm overflow-hidden;
+    background: linear-gradient(180deg, var(--color-parchment) 0%, var(--color-parchment-dark) 100%);
+    border: 1px solid rgba(201, 166, 107, 0.3);
+    box-shadow:
+      inset 0 2px 4px rgba(255, 255, 255, 0.6),
+      0 2px 8px rgba(44, 24, 16, 0.06);
+  }
+
+  .stats-item {
+    @apply px-8 py-5 text-center;
+  }
+
+  .stats-item:not(:last-child) {
+    border-right: 1px solid rgba(201, 166, 107, 0.2);
+  }
+
+  .stats-number {
+    @apply font-display text-4xl font-bold text-sepia;
+    letter-spacing: -0.02em;
+  }
+
+  .stats-label {
+    @apply text-sm text-sepia-light uppercase tracking-widest mt-1;
+  }
+
+  /* Loading Animation */
+  .loading-vintage {
+    @apply relative w-16 h-16;
+  }
+
+  .loading-vintage::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 3px solid var(--color-brass-light);
+    border-top-color: var(--color-brass);
+    border-radius: 50%;
+    animation: spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+  }
+
+  .loading-vintage::after {
+    content: '';
+    position: absolute;
+    inset: 6px;
+    border: 2px solid var(--color-sepia-light);
+    border-bottom-color: var(--color-sepia);
+    border-radius: 50%;
+    animation: spin 0.8s cubic-bezier(0.5, 0, 0.5, 1) infinite reverse;
+  }
+
+  /* Fact Card */
+  .fact-card {
+    @apply relative px-6 py-4 rounded-sm;
+    background: linear-gradient(135deg, rgba(201, 166, 107, 0.08) 0%, rgba(201, 166, 107, 0.03) 100%);
+    border: 1px solid rgba(201, 166, 107, 0.25);
+    border-left: 3px solid var(--color-brass);
+  }
+
+  .fact-card::before {
+    content: '\201C';
+    position: absolute;
+    top: -8px;
+    left: 12px;
+    font-family: var(--font-display);
+    font-size: 3rem;
+    color: var(--color-brass);
+    opacity: 0.4;
+    line-height: 1;
+  }
+
+  /* Header Navigation */
+  .nav-link {
+    @apply relative font-display font-medium text-sepia-light transition-colors duration-300;
+  }
+
+  .nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: var(--color-brass);
+    transition: width 0.3s ease;
+  }
+
+  .nav-link:hover,
+  .nav-link.active {
+    @apply text-sepia;
+  }
+
+  .nav-link:hover::after,
+  .nav-link.active::after {
+    width: 100%;
+  }
+
+  /* Animations */
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in-up {
+    animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+
+  .animate-stagger-1 { animation-delay: 0.1s; }
+  .animate-stagger-2 { animation-delay: 0.2s; }
+  .animate-stagger-3 { animation-delay: 0.3s; }
+  .animate-stagger-4 { animation-delay: 0.4s; }
+
+  /* Selection indicator for cards */
+  .selection-ring {
+    @apply absolute inset-0 rounded-sm pointer-events-none;
+    border: 2px solid var(--color-brass);
+    box-shadow: 0 0 0 4px rgba(201, 166, 107, 0.2);
+  }
+
+  /* Hero styling */
+  .hero-title {
+    @apply font-display text-5xl md:text-6xl font-bold text-ink tracking-tight;
+    text-shadow: 0 2px 4px rgba(44, 24, 16, 0.08);
+  }
+
+  .hero-subtitle {
+    @apply text-xl text-sepia-light leading-relaxed max-w-2xl mx-auto;
+  }
+
+  /* Accent line for cards */
+  .card-accent-left {
+    border-left: 3px solid var(--color-brass);
+  }
+
+  /* ================================
+     AGE OF EMPIRES MAP STYLES
+     ================================ */
+
+  /* Ornate map container */
+  .map-container {
+    @apply relative rounded-sm overflow-hidden;
+    background: var(--color-parchment);
+    border: 4px solid var(--color-brass);
+    box-shadow:
+      inset 0 0 40px rgba(139, 90, 43, 0.12),
+      0 4px 24px rgba(44, 24, 16, 0.2),
+      0 1px 0 rgba(255, 255, 255, 0.5) inset;
+  }
+
+  .map-container::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(201, 166, 107, 0.1) 0%, transparent 50%),
+      radial-gradient(ellipse at 70% 80%, rgba(201, 166, 107, 0.08) 0%, transparent 50%);
+    z-index: 1;
+  }
+
+  .map-container svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  /* SVG territory styles - applied to inline SVG */
+  .map-container .territory {
+    fill-opacity: 0.35;
+    stroke-width: 2px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+  }
+
+  .map-container .territory:hover {
+    fill-opacity: 0.6;
+    stroke-width: 2.5px;
+    filter: drop-shadow(0 0 15px currentColor) drop-shadow(0 0 30px rgba(201, 166, 107, 0.4));
+  }
+
+  .map-container g.territory:hover path,
+  .map-container g.territory:hover {
+    fill-opacity: 0.6;
+    filter: drop-shadow(0 0 15px currentColor) drop-shadow(0 0 30px rgba(201, 166, 107, 0.4));
+  }
+
+  .map-container g.territory path {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+  }
+
+  /* Empire info panel - stone/wood frame aesthetic */
+  .empire-info-panel {
+    @apply p-4 rounded-sm;
+    background: linear-gradient(180deg, #FAF6F0 0%, #F0EBE3 100%);
+    border: 3px solid var(--color-brass);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.6),
+      inset 0 -1px 0 rgba(139, 90, 43, 0.1),
+      0 6px 20px rgba(44, 24, 16, 0.25),
+      0 2px 6px rgba(44, 24, 16, 0.15);
+  }
+
+  .empire-info-panel::before {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    right: 3px;
+    bottom: 3px;
+    border: 1px solid rgba(201, 166, 107, 0.3);
+    border-radius: 1px;
+    pointer-events: none;
+  }
+
+  /* Epoch selector styles */
+  .epoch-selector {
+    @apply px-5 py-4 rounded-sm;
+    background: var(--color-parchment);
+    border: 1px solid rgba(201, 166, 107, 0.3);
+    transition: all 0.3s ease;
+  }
+
+  .epoch-selector:hover {
+    border-color: rgba(201, 166, 107, 0.5);
+    background: var(--color-parchment-dark);
+  }
+
+  .epoch-selector-active {
+    @apply px-5 py-4 rounded-sm;
+    background: linear-gradient(135deg, rgba(201, 166, 107, 0.15) 0%, rgba(201, 166, 107, 0.05) 100%);
+    border: 2px solid var(--color-brass);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.5),
+      0 2px 8px rgba(201, 166, 107, 0.2);
+  }
+
+  /* Mobile empire buttons */
+  .empire-mobile-btn {
+    @apply rounded-sm;
+    background: var(--color-parchment);
+    border: 1px solid rgba(201, 166, 107, 0.3);
+    border-left: 4px solid;
+    transition: all 0.2s ease;
+  }
+
+  .empire-mobile-btn:hover {
+    background: var(--color-parchment-dark);
+    border-color: rgba(201, 166, 107, 0.5);
+  }
+
+  /* Map reveal animation */
+  @keyframes mapReveal {
+    from {
+      opacity: 0;
+      transform: scale(0.98) translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  .animate-map-reveal {
+    animation: mapReveal 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    animation-delay: 0.1s;
+  }
+
+  .animate-stagger-5 { animation-delay: 0.5s; }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .bg-parchment {
+    background-color: var(--color-parchment);
+  }
+
+  .bg-parchment-dark {
+    background-color: var(--color-parchment-dark);
+  }
+
+  .text-ink {
+    color: var(--color-ink);
+  }
+
+  .text-ink-light {
+    color: var(--color-ink-light);
+  }
+
+  .text-sepia {
+    color: var(--color-sepia);
+  }
+
+  .text-sepia-light {
+    color: var(--color-sepia-light);
+  }
+
+  .text-brass {
+    color: var(--color-brass);
+  }
+
+  .text-burgundy {
+    color: var(--color-burgundy);
+  }
+
+  .bg-brass {
+    background-color: var(--color-brass);
+  }
+
+  .border-brass {
+    border-color: var(--color-brass);
+  }
+}
