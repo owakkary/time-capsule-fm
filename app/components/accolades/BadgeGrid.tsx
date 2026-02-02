@@ -19,6 +19,14 @@ const CATEGORY_LABELS: Record<BadgeCategory, string> = {
   special: 'Special',
 };
 
+const CATEGORY_COLORS: Record<BadgeCategory, { bg: string; text: string; activeBg: string }> = {
+  milestone: { bg: 'bg-amber-50', text: 'text-amber-800', activeBg: 'bg-amber-700' },
+  discovery: { bg: 'bg-stone-100', text: 'text-stone-700', activeBg: 'bg-stone-600' },
+  mastery: { bg: 'bg-yellow-50', text: 'text-yellow-800', activeBg: 'bg-yellow-700' },
+  streak: { bg: 'bg-orange-50', text: 'text-orange-800', activeBg: 'bg-orange-700' },
+  special: { bg: 'bg-slate-100', text: 'text-slate-700', activeBg: 'bg-slate-600' },
+};
+
 // SVG icons for each category
 const CategoryIcon = ({ category, className = "w-4 h-4" }: { category: BadgeCategory; className?: string }) => {
   switch (category) {
@@ -113,6 +121,8 @@ export default function BadgeGrid({
             earnedBadges.find(eb => eb.badgeId === b.id)?.isUnlocked
           ).length;
 
+          const colors = category !== 'all' ? CATEGORY_COLORS[category] : null;
+
           return (
             <button
               key={category}
@@ -121,8 +131,8 @@ export default function BadgeGrid({
                 flex items-center gap-1.5 px-3 py-2 rounded-sm font-display text-sm
                 transition-all duration-200 whitespace-nowrap
                 ${isActive
-                ? 'bg-brass text-parchment'
-                : 'bg-parchment-dark text-sepia hover:bg-brass/20'
+                ? (colors ? `${colors.activeBg} text-white` : 'bg-brass text-parchment')
+                : (colors ? `${colors.bg} ${colors.text} hover:opacity-80` : 'bg-parchment-dark text-sepia hover:bg-brass/20')
               }
               `}
             >
