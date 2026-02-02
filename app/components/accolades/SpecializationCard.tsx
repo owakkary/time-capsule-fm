@@ -1,6 +1,7 @@
 'use client';
 
 import { EpochProgress, EmpireProgress, EPOCHS, EMPIRES, getEmpire, getEpoch } from '@/types';
+import Image from 'next/image';
 
 interface SpecializationCardProps {
   epochProgress: EpochProgress[];
@@ -55,8 +56,8 @@ export default function SpecializationCard({
             return (
               <EmpireProgressBadge
                 key={empire.id}
+                id={empire.id}
                 name={empire.name}
-                emoji={empire.emoji}
                 color={empire.color}
                 percentage={percentage}
                 rank={rank}
@@ -135,14 +136,15 @@ function EpochProgressCircle({
 }
 
 function EmpireProgressBadge({
+  id,
   name,
   color,
   percentage,
   rank,
   isExplored,
 }: {
+  id: string;
   name: string;
-  emoji: string;
   color: string;
   percentage: number;
   rank: string;
@@ -157,28 +159,27 @@ function EmpireProgressBadge({
   };
 
   const shortName = name.split(' ')[0];
-  const initial = shortName.charAt(0).toUpperCase();
 
   return (
     <div
       className={`
         flex flex-col items-center p-2 rounded-sm text-center
         transition-all duration-200
-        ${isExplored ? 'bg-parchment-dark' : 'bg-parchment-dark/30 opacity-50'}
+        ${isExplored ? 'bg-parchment-dark' : 'bg-parchment-dark/30'}
         ${percentage === 100 ? 'ring-2 ring-brass/50' : ''}
+        ${!isExplored ? 'grayscale-[60%] opacity-60' : ''}
       `}
       title={`${name}: ${isExplored ? `${percentage}% complete (${rank})` : 'Not explored yet'}`}
     >
-      {/* Empire initial with colored background */}
-      <div
-        className={`
-          w-8 h-8 rounded-full flex items-center justify-center mb-1
-          font-display font-bold text-sm text-parchment
-          ${isExplored ? '' : 'opacity-60'}
-        `}
-        style={{ backgroundColor: color }}
-      >
-        {initial}
+      {/* Empire image */}
+      <div className="w-12 h-12 mb-1">
+        <Image
+          src={`/empires/${id}.png`}
+          alt={name}
+          width={48}
+          height={48}
+          className="object-contain drop-shadow-md"
+        />
       </div>
       {/* Progress bar */}
       <div className="w-full h-1 bg-parchment rounded-full overflow-hidden mb-1">
