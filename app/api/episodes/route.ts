@@ -17,7 +17,37 @@ export async function GET(request: NextRequest) {
     const userId = decodedToken.uid;
 
     const { searchParams } = new URL(request.url);
+    const episodeId = searchParams.get('id');
     const limit = parseInt(searchParams.get('limit') || '20');
+
+    // If specific episode ID requested, fetch that single episode
+    if (episodeId) {
+      const episodeRef = getAdminDb().collection('episodes').doc(episodeId);
+      const episodeSnap = await episodeRef.get();
+
+      if (!episodeSnap.exists) {
+        return NextResponse.json(
+          { error: 'Episode not found' },
+          { status: 404 }
+        );
+      }
+
+      const episodeData = episodeSnap.data();
+      if (episodeData?.userId !== userId) {
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 403 }
+        );
+      }
+
+      return NextResponse.json({
+        episode: {
+          id: episodeSnap.id,
+          ...episodeData,
+          createdAt: episodeData.createdAt?.toDate?.()?.toISOString() || null,
+        }
+      });
+    }
 
     // Query user's episodes, ordered by creation date
     const episodesSnap = await getAdminDb()
