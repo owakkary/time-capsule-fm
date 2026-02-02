@@ -158,7 +158,30 @@ function EmpireProgressBadge({
     master: 'Master',
   };
 
-  const shortName = name.split(' ')[0];
+  // Custom short names to avoid confusion with epoch names
+  const shortNames: Record<string, string> = {
+    'United States': 'USA',
+    'Classical Greece': 'Greece',
+    'Roman Republic': 'Republic',
+    'Roman Empire': 'Rome',
+    'Macedonian Empire': 'Macedon',
+    'Parthian Empire': 'Parthia',
+    'Ptolemaic Egypt': 'Ptolemaic',
+    'Hittite Empire': 'Hittite',
+    'Persian Empire': 'Persia',
+    'British Empire': 'Britain',
+    'French Empire': 'France',
+    'Russian Empire': 'Russia',
+    'Meiji Japan': 'Japan',
+    'Han Dynasty China': 'Han',
+    'Qing Dynasty China': 'Qing',
+    'Minoan Crete': 'Minoan',
+    'Mycenaean Greece': 'Mycenae',
+    'Phoenician City-States': 'Phoenicia',
+    'Mesopotamian Empires': 'Mesopotamia',
+    'Ancient Egypt': 'Egypt',
+  };
+  const shortName = shortNames[name] || name.split(' ')[0];
 
   return (
     <div
