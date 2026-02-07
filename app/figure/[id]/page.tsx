@@ -54,6 +54,24 @@ export default function FigurePage({ params }: { params: { id: string } }) {
       }
 
       const data = await response.json();
+
+      // Generate audio (non-fatal)
+      try {
+        await fetch('/api/tts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            episodeId: data.id,
+            text: data.content,
+          }),
+        });
+      } catch (ttsError) {
+        console.error('TTS error (non-fatal):', ttsError);
+      }
+
       router.push(`/episode/${data.id}`);
     } catch (error) {
       console.error('Generation error:', error);
