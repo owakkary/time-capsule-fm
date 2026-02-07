@@ -3,6 +3,14 @@ import Anthropic from '@anthropic-ai/sdk';
 import { verifyAuthToken, getAdminDb, getFigure, getMoment, getPerspective, getOverview } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { ContentType, EmpireId, EpochId, getEmpire, EMPIRE_TO_EPOCH } from '@/types';
+import {
+  XP_REWARDS,
+  calculateLevelFromXP,
+  getTierFromLevel,
+  getAvatarFromTier,
+  getTitleFromTier,
+  shouldUpdateStreak,
+} from '@/lib/xp';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
@@ -255,6 +263,14 @@ export async function POST(request: NextRequest) {
 
     await episodeRef.set(episodeData);
 
+    // Track explorer progress
+    let progressResult = null;
+    try {
+      progressResult = await trackEpisodeGeneration(userId, empireId, epochId, type, contentId);
+    } catch (progressError) {
+      console.error('Progress tracking error (non-fatal):', progressError);
+    }
+
     return NextResponse.json({
       id: episodeRef.id,
       title,
@@ -265,6 +281,8 @@ export async function POST(request: NextRequest) {
       durationMinutes,
       // Legacy field for backward compatibility
       timePeriod: empireId,
+      // Progress data
+      progress: progressResult,
     });
 
   } catch (error) {
@@ -274,4 +292,221 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+// Helper function to track progress when episode is generated
+async function trackEpisodeGeneration(
+  userId: string,
+  empireId: EmpireId,
+  epochId: EpochId,
+  contentType: ContentType,
+  contentId?: string
+): Promise<{
+  xpGained: number;
+  levelUp: boolean;
+  newLevel?: number;
+  newTier?: string;
+  streakUpdated: boolean;
+  newStreak?: number;
+}> {
+  const db = getAdminDb();
+
+  // Get current profile
+  const profileRef = db.doc(`users/${userId}/explorer/profile`);
+  const profileSnap = await profileRef.get();
+
+  let profile: {
+    userId: string;
+    currentXP: number;
+    currentLevel: number;
+    tier: string;
+    avatarStage: string;
+    currentTitle: string;
+    totalEpisodesGenerated: number;
+    totalListeningMinutes: number;
+    episodesCompleted: number;
+    currentDailyStreak: number;
+    longestDailyStreak: number;
+    lastActivityDate: Date | null;
+  };
+
+  if (!profileSnap.exists) {
+    // Create initial profile
+    profile = {
+      userId,
+      currentXP: 0,
+      currentLevel: 1,
+      tier: 'novice',
+      avatarStage: 'wanderer',
+      currentTitle: 'Curious Wanderer',
+      totalEpisodesGenerated: 0,
+      totalListeningMinutes: 0,
+      episodesCompleted: 0,
+      currentDailyStreak: 0,
+      longestDailyStreak: 0,
+      lastActivityDate: null,
+    };
+    await profileRef.set({
+      ...profile,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+  } else {
+    const data = profileSnap.data()!;
+    profile = {
+      userId: data.userId || userId,
+      currentXP: data.currentXP || 0,
+      currentLevel: data.currentLevel || 1,
+      tier: data.tier || 'novice',
+      avatarStage: data.avatarStage || 'wanderer',
+      currentTitle: data.currentTitle || 'Curious Wanderer',
+      totalEpisodesGenerated: data.totalEpisodesGenerated || 0,
+      totalListeningMinutes: data.totalListeningMinutes || 0,
+      episodesCompleted: data.episodesCompleted || 0,
+      currentDailyStreak: data.currentDailyStreak || 0,
+      longestDailyStreak: data.longestDailyStreak || 0,
+      lastActivityDate: data.lastActivityDate?.toDate() || null,
+    };
+  }
+
+  const result = {
+    xpGained: XP_REWARDS.episode_generated,
+    levelUp: false,
+    newLevel: undefined as number | undefined,
+    newTier: undefined as string | undefined,
+    streakUpdated: false,
+    newStreak: undefined as number | undefined,
+  };
+
+  // Profile updates
+  const updates: Record<string, unknown> = {
+    totalEpisodesGenerated: profile.totalEpisodesGenerated + 1,
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+
+  // Check streak
+  const streakCheck = shouldUpdateStreak(profile.lastActivityDate);
+  if (streakCheck.isNewDay) {
+    updates.lastActivityDate = FieldValue.serverTimestamp();
+    result.streakUpdated = true;
+
+    if (streakCheck.continueStreak) {
+      const newStreak = profile.currentDailyStreak + 1;
+      updates.currentDailyStreak = newStreak;
+      result.newStreak = newStreak;
+      if (newStreak > profile.longestDailyStreak) {
+        updates.longestDailyStreak = newStreak;
+      }
+      // Streak bonuses
+      if (newStreak === 7) result.xpGained += XP_REWARDS.streak_weekly;
+      if (newStreak === 30) result.xpGained += XP_REWARDS.streak_monthly;
+    } else {
+      updates.currentDailyStreak = 1;
+      result.newStreak = 1;
+    }
+  }
+
+  // Content-specific XP
+  if (contentType === 'figure' && contentId) {
+    result.xpGained += XP_REWARDS.figure_discovered;
+  } else if (contentType === 'moment' && contentId) {
+    result.xpGained += XP_REWARDS.moment_discovered;
+  } else if (contentType === 'perspective' && contentId) {
+    result.xpGained += XP_REWARDS.perspective_discovered;
+  } else if (contentType === 'overview') {
+    result.xpGained += XP_REWARDS.overview_completed;
+  }
+
+  // Update empire progress
+  const empireRef = db.doc(`users/${userId}/explorer/profile/empires/${empireId}`);
+  const empireSnap = await empireRef.get();
+
+  if (empireSnap.exists) {
+    const empireData = empireSnap.data();
+    const empireUpdates: Record<string, unknown> = {
+      totalEpisodes: (empireData?.totalEpisodes || 0) + 1,
+      lastExploredAt: FieldValue.serverTimestamp(),
+    };
+
+    if (contentType === 'figure' && contentId && !empireData?.figuresDiscovered?.includes(contentId)) {
+      empireUpdates.figuresDiscovered = [...(empireData?.figuresDiscovered || []), contentId];
+    } else if (contentType === 'moment' && contentId && !empireData?.momentsDiscovered?.includes(contentId)) {
+      empireUpdates.momentsDiscovered = [...(empireData?.momentsDiscovered || []), contentId];
+    } else if (contentType === 'perspective' && contentId && !empireData?.perspectivesExperienced?.includes(contentId)) {
+      empireUpdates.perspectivesExperienced = [...(empireData?.perspectivesExperienced || []), contentId];
+    } else if (contentType === 'overview') {
+      empireUpdates.overviewCompleted = true;
+    }
+
+    await empireRef.update(empireUpdates);
+  } else {
+    // First time exploring this empire
+    const empiresSnap = await db.collection(`users/${userId}/explorer/profile/empires`).get();
+    const isFirstEmpire = empiresSnap.empty;
+
+    await empireRef.set({
+      empireId,
+      figuresDiscovered: contentType === 'figure' && contentId ? [contentId] : [],
+      momentsDiscovered: contentType === 'moment' && contentId ? [contentId] : [],
+      perspectivesExperienced: contentType === 'perspective' && contentId ? [contentId] : [],
+      overviewCompleted: contentType === 'overview',
+      completionPercentage: 25,
+      rank: 'curious',
+      totalEpisodes: 1,
+      firstExploredAt: FieldValue.serverTimestamp(),
+      lastExploredAt: FieldValue.serverTimestamp(),
+    });
+
+    if (isFirstEmpire) {
+      result.xpGained += XP_REWARDS.first_empire;
+    }
+  }
+
+  // Update epoch progress
+  const epochRef = db.doc(`users/${userId}/explorer/profile/epochs/${epochId}`);
+  const epochSnap = await epochRef.get();
+
+  if (epochSnap.exists) {
+    const epochData = epochSnap.data();
+    const epochUpdates: Record<string, unknown> = {
+      totalEpisodes: (epochData?.totalEpisodes || 0) + 1,
+      lastExploredAt: FieldValue.serverTimestamp(),
+    };
+
+    if (!epochData?.empiresExplored?.includes(empireId)) {
+      epochUpdates.empiresExplored = [...(epochData?.empiresExplored || []), empireId];
+    }
+
+    await epochRef.update(epochUpdates);
+  } else {
+    await epochRef.set({
+      epochId,
+      empiresExplored: [empireId],
+      totalEpisodes: 1,
+      completionPercentage: 0,
+      firstExploredAt: FieldValue.serverTimestamp(),
+      lastExploredAt: FieldValue.serverTimestamp(),
+    });
+  }
+
+  // Calculate new XP and level
+  const newXP = profile.currentXP + result.xpGained;
+  const newLevel = calculateLevelFromXP(newXP);
+
+  updates.currentXP = newXP;
+
+  if (newLevel > profile.currentLevel) {
+    result.levelUp = true;
+    result.newLevel = newLevel;
+    const newTier = getTierFromLevel(newLevel);
+    result.newTier = newTier;
+    updates.currentLevel = newLevel;
+    updates.tier = newTier;
+    updates.avatarStage = getAvatarFromTier(newTier);
+    updates.currentTitle = getTitleFromTier(newTier);
+  }
+
+  await profileRef.update(updates);
+
+  return result;
 }
