@@ -1,0 +1,165 @@
+{
+  "bronze-age": {
+    "mountains": [
+      { "id": "taurus", "name": "Taurus Mountains", "position": [35, 37], "scale": 1.0 },
+      { "id": "zagros", "name": "Zagros Mountains", "position": [48, 34], "scale": 1.3 },
+      { "id": "sinai", "name": "Sinai", "position": [34, 29], "scale": 0.6 },
+      { "id": "ida", "name": "Mount Ida", "position": [25, 35], "scale": 0.5 },
+      { "id": "olympus", "name": "Mount Olympus", "position": [22, 40], "scale": 0.7 }
+    ],
+    "forests": [
+      { "id": "lebanon-cedar", "name": "Cedars of Lebanon", "position": [36, 34], "scale": 0.6 },
+      { "id": "pontus-forest", "name": "Pontus Forests", "position": [38, 41], "scale": 0.7 }
+    ],
+    "deserts": [
+      { "id": "sahara", "name": "Sahara Desert", "position": [10, 25], "scale": 2.0 },
+      { "id": "arabian", "name": "Arabian Desert", "position": [45, 25], "scale": 1.5 },
+      { "id": "syrian", "name": "Syrian Desert", "position": [38, 32], "scale": 0.8 }
+    ],
+    "cities": [
+      { "id": "memphis", "name": "Memphis", "position": [31.2, 29.8], "type": "capital" },
+      { "id": "thebes", "name": "Thebes", "position": [32.6, 25.7], "type": "capital" },
+      { "id": "babylon", "name": "Babylon", "position": [44.4, 32.5], "type": "capital" },
+      { "id": "ur", "name": "Ur", "position": [46, 30.9], "type": "city" },
+      { "id": "knossos", "name": "Knossos", "position": [25.1, 35.3], "type": "capital" },
+      { "id": "mycenae", "name": "Mycenae", "position": [22.7, 37.7], "type": "capital" },
+      { "id": "hattusa", "name": "Hattusa", "position": [34.6, 40], "type": "capital" },
+      { "id": "troy", "name": "Troy", "position": [26.2, 39.9], "type": "city" }
+    ],
+    "rivers": [
+      { "id": "nile", "name": "Nile", "path": [[31, 31], [31.5, 28], [32, 25], [32.5, 22], [33, 18]] },
+      { "id": "tigris", "name": "Tigris", "path": [[43, 38], [44, 35], [46, 32], [47, 30]] },
+      { "id": "euphrates", "name": "Euphrates", "path": [[38, 37], [40, 35], [43, 33], [46, 30]] }
+    ]
+  },
+  "classical": {
+    "mountains": [
+      { "id": "alps", "name": "Alps", "position": [10, 46], "scale": 1.2 },
+      { "id": "apennines", "name": "Apennines", "position": [13, 42], "scale": 0.8 },
+      { "id": "pyrenees", "name": "Pyrenees", "position": [0, 42], "scale": 0.9 },
+      { "id": "balkans", "name": "Balkan Mountains", "position": [24, 42], "scale": 0.7 },
+      { "id": "taurus", "name": "Taurus Mountains", "position": [35, 37], "scale": 1.0 },
+      { "id": "zagros", "name": "Zagros Mountains", "position": [48, 34], "scale": 1.3 },
+      { "id": "atlas", "name": "Atlas Mountains", "position": [-5, 32], "scale": 0.9 }
+    ],
+    "forests": [
+      { "id": "gaul-forest", "name": "Gaul Forests", "position": [2, 47], "scale": 1.0 },
+      { "id": "germania-forest", "name": "Germania Forests", "position": [10, 51], "scale": 1.2 },
+      { "id": "pontus-forest", "name": "Pontus Forests", "position": [38, 41], "scale": 0.7 }
+    ],
+    "deserts": [
+      { "id": "sahara", "name": "Sahara Desert", "position": [10, 25], "scale": 2.0 },
+      { "id": "arabian", "name": "Arabian Desert", "position": [45, 25], "scale": 1.5 },
+      { "id": "syrian", "name": "Syrian Desert", "position": [38, 32], "scale": 0.8 }
+    ],
+    "cities": [
+      { "id": "athens", "name": "Athens", "position": [23.7, 38], "type": "capital" },
+      { "id": "sparta", "name": "Sparta", "position": [22.4, 37], "type": "city" },
+      { "id": "persepolis", "name": "Persepolis", "position": [52.9, 29.9], "type": "capital" },
+      { "id": "susa", "name": "Susa", "position": [48.2, 32.2], "type": "city" },
+      { "id": "rome", "name": "Rome", "position": [12.5, 41.9], "type": "capital" },
+      { "id": "carthage", "name": "Carthage", "position": [10.3, 36.8], "type": "capital" },
+      { "id": "tyre", "name": "Tyre", "position": [35.2, 33.3], "type": "capital" },
+      { "id": "sidon", "name": "Sidon", "position": [35.4, 33.5], "type": "city" }
+    ],
+    "rivers": [
+      { "id": "tiber", "name": "Tiber", "path": [[12, 43], [12.5, 42], [12.5, 41.5]] },
+      { "id": "tigris", "name": "Tigris", "path": [[43, 38], [44, 35], [46, 32], [47, 30]] },
+      { "id": "euphrates", "name": "Euphrates", "path": [[38, 37], [40, 35], [43, 33], [46, 30]] }
+    ]
+  },
+  "hellenistic-roman": {
+    "mountains": [
+      { "id": "alps", "name": "Alps", "position": [10, 46], "scale": 1.2 },
+      { "id": "apennines", "name": "Apennines", "position": [13, 42], "scale": 0.8 },
+      { "id": "pyrenees", "name": "Pyrenees", "position": [0, 42], "scale": 0.9 },
+      { "id": "carpathians", "name": "Carpathians", "position": [25, 47], "scale": 1.0 },
+      { "id": "balkans", "name": "Balkan Mountains", "position": [24, 42], "scale": 0.7 },
+      { "id": "taurus", "name": "Taurus Mountains", "position": [35, 37], "scale": 1.0 },
+      { "id": "zagros", "name": "Zagros Mountains", "position": [48, 34], "scale": 1.3 },
+      { "id": "hindu-kush", "name": "Hindu Kush", "position": [68, 36], "scale": 1.1 },
+      { "id": "himalayas", "name": "Himalayas", "position": [85, 30], "scale": 1.5 },
+      { "id": "atlas", "name": "Atlas Mountains", "position": [-5, 32], "scale": 0.9 }
+    ],
+    "forests": [
+      { "id": "gaul-forest", "name": "Gaul Forests", "position": [2, 47], "scale": 1.0 },
+      { "id": "germania-forest", "name": "Germania Forests", "position": [10, 51], "scale": 1.2 },
+      { "id": "dacia-forest", "name": "Dacia Forests", "position": [26, 45], "scale": 0.8 },
+      { "id": "chinese-forests", "name": "Chinese Forests", "position": [115, 30], "scale": 1.0 }
+    ],
+    "deserts": [
+      { "id": "sahara", "name": "Sahara Desert", "position": [10, 25], "scale": 2.0 },
+      { "id": "arabian", "name": "Arabian Desert", "position": [45, 25], "scale": 1.5 },
+      { "id": "syrian", "name": "Syrian Desert", "position": [38, 32], "scale": 0.8 },
+      { "id": "gobi", "name": "Gobi Desert", "position": [105, 43], "scale": 1.2 }
+    ],
+    "cities": [
+      { "id": "rome", "name": "Rome", "position": [12.5, 41.9], "type": "capital" },
+      { "id": "alexandria", "name": "Alexandria", "position": [29.9, 31.2], "type": "capital" },
+      { "id": "antioch", "name": "Antioch", "position": [36.2, 36.2], "type": "city" },
+      { "id": "ctesiphon", "name": "Ctesiphon", "position": [44.6, 33.1], "type": "capital" },
+      { "id": "pella", "name": "Pella", "position": [22.5, 40.8], "type": "city" },
+      { "id": "changan", "name": "Chang'an", "position": [109, 34.3], "type": "capital" },
+      { "id": "luoyang", "name": "Luoyang", "position": [112.5, 34.6], "type": "city" },
+      { "id": "carthage", "name": "Carthage", "position": [10.3, 36.8], "type": "city" }
+    ],
+    "rivers": [
+      { "id": "nile", "name": "Nile", "path": [[31, 31], [31.5, 28], [32, 25], [32.5, 22], [33, 18]] },
+      { "id": "tigris", "name": "Tigris", "path": [[43, 38], [44, 35], [46, 32], [47, 30]] },
+      { "id": "euphrates", "name": "Euphrates", "path": [[38, 37], [40, 35], [43, 33], [46, 30]] },
+      { "id": "tiber", "name": "Tiber", "path": [[12, 43], [12.5, 42], [12.5, 41.5]] },
+      { "id": "danube", "name": "Danube", "path": [[9, 48], [15, 48], [22, 46], [28, 44], [30, 43]] },
+      { "id": "yangtze", "name": "Yangtze", "path": [[95, 33], [105, 30], [115, 31], [122, 31]] },
+      { "id": "yellow", "name": "Yellow River", "path": [[100, 35], [108, 37], [115, 38], [118, 38]] }
+    ]
+  },
+  "revolutionary": {
+    "mountains": [
+      { "id": "rocky", "name": "Rocky Mountains", "position": [-110, 45], "scale": 1.5 },
+      { "id": "appalachian", "name": "Appalachian Mountains", "position": [-80, 38], "scale": 1.0 },
+      { "id": "andes", "name": "Andes Mountains", "position": [-70, -15], "scale": 2.0 },
+      { "id": "alps-rev", "name": "Alps", "position": [10, 46], "scale": 1.0 },
+      { "id": "himalayas", "name": "Himalayas", "position": [85, 30], "scale": 2.0 },
+      { "id": "urals", "name": "Ural Mountains", "position": [60, 55], "scale": 1.2 },
+      { "id": "kunlun", "name": "Kunlun Mountains", "position": [85, 36], "scale": 1.3 },
+      { "id": "tian-shan", "name": "Tian Shan", "position": [80, 42], "scale": 1.1 },
+      { "id": "scottish-highlands", "name": "Scottish Highlands", "position": [-4, 57], "scale": 0.6 }
+    ],
+    "forests": [
+      { "id": "amazon", "name": "Amazon Rainforest", "position": [-60, -5], "scale": 2.0 },
+      { "id": "taiga", "name": "Siberian Taiga", "position": [100, 60], "scale": 2.5 },
+      { "id": "congo", "name": "Congo Rainforest", "position": [20, 0], "scale": 1.5 },
+      { "id": "north-american", "name": "North American Forests", "position": [-90, 48], "scale": 1.5 },
+      { "id": "chinese-forests", "name": "Chinese Forests", "position": [115, 30], "scale": 1.0 }
+    ],
+    "deserts": [
+      { "id": "sahara-rev", "name": "Sahara Desert", "position": [10, 23], "scale": 2.5 },
+      { "id": "gobi", "name": "Gobi Desert", "position": [105, 43], "scale": 1.5 },
+      { "id": "arabian-rev", "name": "Arabian Desert", "position": [45, 23], "scale": 1.3 },
+      { "id": "australian", "name": "Australian Outback", "position": [135, -25], "scale": 1.8 },
+      { "id": "kalahari", "name": "Kalahari Desert", "position": [22, -24], "scale": 1.0 }
+    ],
+    "cities": [
+      { "id": "london", "name": "London", "position": [-0.1, 51.5], "type": "capital" },
+      { "id": "paris", "name": "Paris", "position": [2.3, 48.9], "type": "capital" },
+      { "id": "beijing", "name": "Beijing", "position": [116.4, 39.9], "type": "capital" },
+      { "id": "washington", "name": "Washington D.C.", "position": [-77, 38.9], "type": "capital" },
+      { "id": "st-petersburg", "name": "St. Petersburg", "position": [30.3, 59.9], "type": "capital" },
+      { "id": "tokyo", "name": "Tokyo", "position": [139.7, 35.7], "type": "capital" },
+      { "id": "new-york", "name": "New York", "position": [-74, 40.7], "type": "city" },
+      { "id": "canton", "name": "Canton", "position": [113.3, 23.1], "type": "city" },
+      { "id": "calcutta", "name": "Calcutta", "position": [88.4, 22.6], "type": "city" },
+      { "id": "moscow", "name": "Moscow", "position": [37.6, 55.8], "type": "city" }
+    ],
+    "rivers": [
+      { "id": "mississippi", "name": "Mississippi", "path": [[-90, 47], [-91, 42], [-91, 35], [-90, 30]] },
+      { "id": "amazon-river", "name": "Amazon", "path": [[-75, -5], [-65, -4], [-55, -2], [-50, 0]] },
+      { "id": "thames", "name": "Thames", "path": [[-2, 51.5], [-0.5, 51.5], [0.5, 51.5]] },
+      { "id": "seine", "name": "Seine", "path": [[3, 48], [2.3, 48.8], [1, 49.5]] },
+      { "id": "yangtze", "name": "Yangtze", "path": [[95, 33], [105, 30], [115, 31], [122, 31]] },
+      { "id": "yellow", "name": "Yellow River", "path": [[100, 35], [108, 37], [115, 38], [118, 38]] },
+      { "id": "ganges", "name": "Ganges", "path": [[78, 30], [82, 26], [88, 23]] },
+      { "id": "volga", "name": "Volga", "path": [[45, 57], [48, 52], [50, 48], [49, 46]] }
+    ]
+  }
+}

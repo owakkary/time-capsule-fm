@@ -429,6 +429,245 @@
   }
 
   .animate-stagger-5 { animation-delay: 0.5s; }
+
+  /* ================================
+     GEOGRAPHIC MAP STYLES
+     ================================ */
+
+  /* SVG geographic map container */
+  .geographic-map {
+    display: block;
+    width: 100%;
+    height: auto;
+    user-select: none;
+  }
+
+  /* Territory hover and selection states */
+  .empire-territory {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .empire-territory:hover {
+    cursor: pointer;
+  }
+
+  .empire-territory path.territory {
+    transition: fill-opacity 0.3s ease, stroke-width 0.3s ease, filter 0.3s ease;
+  }
+
+  /* Empire labels on map */
+  .empire-label {
+    font-family: var(--font-display), Georgia, serif;
+    pointer-events: none;
+    text-shadow: 0 1px 2px rgba(250, 246, 240, 0.8);
+  }
+
+  /* ================================
+     TERRAIN ICON STYLES
+     ================================ */
+
+  .terrain-icon {
+    pointer-events: none;
+    transition: transform 0.2s ease;
+  }
+
+  .terrain-label {
+    font-family: var(--font-body), Georgia, serif;
+    pointer-events: none;
+  }
+
+  .city-label,
+  .capital-label {
+    font-family: var(--font-display), Georgia, serif;
+    pointer-events: none;
+  }
+
+  /* Mountain styles */
+  .terrain-icon.mountain {
+    filter: drop-shadow(1px 2px 2px rgba(44, 24, 16, 0.3));
+  }
+
+  /* Forest styles */
+  .terrain-icon.forest {
+    filter: drop-shadow(0px 1px 1px rgba(44, 24, 16, 0.2));
+  }
+
+  /* Desert styles */
+  .terrain-icon.desert {
+    opacity: 0.7;
+  }
+
+  /* City and capital markers */
+  .terrain-icon.city,
+  .terrain-icon.capital {
+    filter: drop-shadow(0 1px 2px rgba(44, 24, 16, 0.4));
+  }
+
+  /* ================================
+     COMPASS AND DECORATIONS
+     ================================ */
+
+  .compass-rose {
+    filter: drop-shadow(0 2px 4px rgba(44, 24, 16, 0.2));
+  }
+
+  .compass-label {
+    font-family: var(--font-display), Georgia, serif;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .scale-bar {
+    filter: drop-shadow(0 1px 2px rgba(44, 24, 16, 0.15));
+  }
+
+  .scale-label {
+    font-family: var(--font-body), Georgia, serif;
+  }
+
+  /* Map legend panel */
+  .map-legend {
+    filter: drop-shadow(0 2px 8px rgba(44, 24, 16, 0.15));
+  }
+
+  .legend-title {
+    font-family: var(--font-display), Georgia, serif;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .legend-item {
+    font-family: var(--font-body), Georgia, serif;
+  }
+
+  /* Title cartouche */
+  .title-cartouche {
+    filter: drop-shadow(0 3px 10px rgba(44, 24, 16, 0.2));
+  }
+
+  .cartouche-title {
+    font-family: var(--font-display), Georgia, serif;
+    text-transform: uppercase;
+  }
+
+  .cartouche-subtitle {
+    font-family: var(--font-body), Georgia, serif;
+  }
+
+  /* ================================
+     EMPIRE TOOLTIP STYLES
+     ================================ */
+
+  .empire-tooltip {
+    animation: tooltipFadeIn 0.2s ease-out;
+  }
+
+  @keyframes tooltipFadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(5px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* ================================
+     MAP LAYER ANIMATIONS
+     ================================ */
+
+  @keyframes territoryPulse {
+    0%, 100% {
+      fill-opacity: 0.4;
+    }
+    50% {
+      fill-opacity: 0.55;
+    }
+  }
+
+  .territory-pulse {
+    animation: territoryPulse 2s ease-in-out infinite;
+  }
+
+  @keyframes waterShimmer {
+    0%, 100% {
+      opacity: 0.6;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+
+  .water-layer path {
+    animation: waterShimmer 4s ease-in-out infinite;
+  }
+
+  /* Staggered reveal for map elements */
+  @keyframes mapElementReveal {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .landmass-layer path {
+    animation: mapElementReveal 0.6s ease-out forwards;
+    animation-delay: 0.1s;
+    opacity: 0;
+  }
+
+  .water-layer path {
+    animation: mapElementReveal 0.6s ease-out forwards;
+    animation-delay: 0.2s;
+    opacity: 0;
+  }
+
+  .empire-layer .empire-territory {
+    animation: mapElementReveal 0.5s ease-out forwards;
+    opacity: 0;
+  }
+
+  .empire-layer .empire-territory:nth-child(1) { animation-delay: 0.3s; }
+  .empire-layer .empire-territory:nth-child(2) { animation-delay: 0.4s; }
+  .empire-layer .empire-territory:nth-child(3) { animation-delay: 0.5s; }
+  .empire-layer .empire-territory:nth-child(4) { animation-delay: 0.6s; }
+  .empire-layer .empire-territory:nth-child(5) { animation-delay: 0.7s; }
+
+  .terrain-features {
+    animation: mapElementReveal 0.6s ease-out forwards;
+    animation-delay: 0.8s;
+    opacity: 0;
+  }
+
+  .map-decorations {
+    animation: mapElementReveal 0.5s ease-out forwards;
+    animation-delay: 1s;
+    opacity: 0;
+  }
+
+  /* Reduced motion preferences */
+  @media (prefers-reduced-motion: reduce) {
+    .territory-pulse,
+    .water-layer path,
+    .landmass-layer path,
+    .empire-layer .empire-territory,
+    .terrain-features,
+    .map-decorations,
+    .empire-tooltip {
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
+
+    .empire-territory path.territory {
+      transition: none;
+    }
+  }
 }
 
 @layer utilities {
@@ -474,5 +713,231 @@
 
   .border-brass {
     border-color: var(--color-brass);
+  }
+}
+
+/* ================================
+   ACCOLADES & PROGRESSION STYLES
+   ================================ */
+
+/* Explorer Avatar glow effect */
+.explorer-avatar-glow {
+  filter: drop-shadow(0 0 15px rgba(201, 166, 107, 0.4));
+  animation: avatarPulse 3s ease-in-out infinite;
+}
+
+@keyframes avatarPulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 15px rgba(201, 166, 107, 0.4));
+  }
+  50% {
+    filter: drop-shadow(0 0 25px rgba(201, 166, 107, 0.6));
+  }
+}
+
+/* XP shimmer animation */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+/* Progress bar shrink animation for toasts */
+@keyframes shrinkWidth {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
+/* Confetti animation for badge unlocks */
+@keyframes confetti {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-100px) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+.animate-confetti {
+  animation: confetti 1.5s ease-out forwards;
+}
+
+/* Subtle bounce for icons */
+@keyframes bounceSubtle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.animate-bounce-subtle {
+  animation: bounceSubtle 0.6s ease-in-out;
+}
+
+/* Flame animation for streaks */
+@keyframes flame {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+  }
+  25% {
+    transform: scale(1.05) rotate(-2deg);
+  }
+  50% {
+    transform: scale(1.1) rotate(0deg);
+  }
+  75% {
+    transform: scale(1.05) rotate(2deg);
+  }
+}
+
+.animate-flame {
+  animation: flame 1.5s ease-in-out infinite;
+}
+
+/* Badge unlock glow */
+@keyframes badgeUnlock {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-badge-unlock {
+  animation: badgeUnlock 0.5s ease-out forwards;
+}
+
+/* Level up celebration */
+@keyframes levelUp {
+  0% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.15);
+  }
+  50% {
+    transform: scale(1);
+  }
+  75% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-level-up {
+  animation: levelUp 0.8s ease-out;
+}
+
+/* Badge rarity borders */
+.badge-common {
+  border-color: #B87333;
+}
+
+.badge-uncommon {
+  border-color: #B87333;
+  box-shadow: 0 0 10px rgba(184, 115, 51, 0.3);
+}
+
+.badge-rare {
+  border-color: #C9A66B;
+  box-shadow: 0 0 15px rgba(201, 166, 107, 0.4);
+}
+
+.badge-epic {
+  border-color: #4A6FA5;
+  box-shadow: 0 0 20px rgba(74, 111, 165, 0.4);
+}
+
+.badge-legendary {
+  border-color: #722F37;
+  box-shadow: 0 0 25px rgba(114, 47, 55, 0.5);
+  position: relative;
+}
+
+.badge-legendary::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(135deg, #722F37, #C9A66B, #722F37);
+  border-radius: inherit;
+  z-index: -1;
+  animation: legendaryGlow 2s ease-in-out infinite;
+}
+
+@keyframes legendaryGlow {
+  0%, 100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+/* Progress circle animation */
+@keyframes progressFill {
+  from {
+    stroke-dashoffset: var(--progress-offset, 220);
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.progress-circle-animated {
+  animation: progressFill 1s ease-out forwards;
+}
+
+/* Toast slide-in animation */
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.3s ease-out forwards;
+}
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .explorer-avatar-glow,
+  .animate-shimmer,
+  .animate-confetti,
+  .animate-bounce-subtle,
+  .animate-flame,
+  .animate-badge-unlock,
+  .animate-level-up,
+  .badge-legendary::after,
+  .progress-circle-animated,
+  .animate-slide-in-right {
+    animation: none;
   }
 }

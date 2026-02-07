@@ -9,8 +9,9 @@ import {
   signInWithPopup,
   signOut as firebaseSignOut,
 } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, Timestamp } from 'firebase/firestore';
 import { auth, db, googleProvider } from '@/lib/firebase';
+import { createInitialExplorerProfile } from '@/lib/xp';
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -38,6 +39,16 @@ export function useAuth() {
             displayName: user.displayName || user.email?.split('@')[0],
             createdAt: new Date(),
             updatedAt: new Date(),
+          });
+
+          // Also create explorer profile for new users
+          const explorerRef = doc(db, 'users', user.uid, 'explorer', 'profile');
+          const explorerProfile = createInitialExplorerProfile(user.uid);
+          await setDoc(explorerRef, {
+            ...explorerProfile,
+            lastActivityDate: null,
+            createdAt: Timestamp.now(),
+            updatedAt: Timestamp.now(),
           });
         }
       }

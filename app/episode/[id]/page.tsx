@@ -147,14 +147,13 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
                 Time Capsule FM
               </h1>
             </Link>
-            <nav className="flex items-center gap-8">
-              <Link href="/explore" className="nav-link">Explore</Link>
+            <nav className="flex items-center gap-6">
+              <Link href="/dashboard" className="nav-link">Explore</Link>
               <Link href="/figures" className="nav-link">Figures</Link>
               <Link href="/moments" className="nav-link">Moments</Link>
-              <Link href="/collections" className="nav-link">Collections</Link>
               <Link href="/episodes" className="nav-link active">My Episodes</Link>
-              <div className="flex items-center gap-4 pl-4 border-l border-brass/20">
-                <span className="text-sm text-sepia-light font-body">{user.email}</span>
+              <div className="flex items-center gap-3 pl-4 border-l border-brass/20">
+                <Link href="/accolades" className="text-sm text-sepia-light hover:text-sepia transition-colors font-display">Profile</Link>
                 <button onClick={handleSignOut} className="text-sm text-sepia-light hover:text-sepia transition-colors font-display">Sign Out</button>
               </div>
             </nav>

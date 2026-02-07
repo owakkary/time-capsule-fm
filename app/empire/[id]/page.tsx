@@ -88,8 +88,8 @@ export default function EmpirePage({ params }: { params: { id: string } }) {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h1 className="font-display text-2xl font-bold text-ink mb-4">Empire Not Found</h1>
-          <Link href="/explore" className="text-brass hover:text-brass-dark transition-colors font-display">
-            Return to Explore
+          <Link href="/dashboard" className="text-brass hover:text-brass-dark transition-colors font-display">
+            Return to Dashboard
           </Link>
         </div>
       </div>
@@ -112,14 +112,13 @@ export default function EmpirePage({ params }: { params: { id: string } }) {
                 Time Capsule FM
               </h1>
             </Link>
-            <nav className="flex items-center gap-8">
-              <Link href="/explore" className="nav-link active">Explore</Link>
+            <nav className="flex items-center gap-6">
+              <Link href="/dashboard" className="nav-link">Explore</Link>
               <Link href="/figures" className="nav-link">Figures</Link>
               <Link href="/moments" className="nav-link">Moments</Link>
-              <Link href="/collections" className="nav-link">Collections</Link>
               <Link href="/episodes" className="nav-link">My Episodes</Link>
-              <div className="flex items-center gap-4 pl-4 border-l border-brass/20">
-                <span className="text-sm text-sepia-light font-body">{user.email}</span>
+              <div className="flex items-center gap-3 pl-4 border-l border-brass/20">
+                <Link href="/accolades" className="text-sm text-sepia-light hover:text-sepia transition-colors font-display">Profile</Link>
                 <button onClick={handleSignOut} className="text-sm text-sepia-light hover:text-sepia transition-colors font-display">Sign Out</button>
               </div>
             </nav>
@@ -130,7 +129,7 @@ export default function EmpirePage({ params }: { params: { id: string } }) {
       {/* Breadcrumb */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <nav className="flex items-center gap-2 text-sm text-sepia-light font-body">
-          <Link href="/explore" className="hover:text-sepia transition-colors">Explore</Link>
+          <Link href="/dashboard" className="hover:text-sepia transition-colors">Dashboard</Link>
           <span>/</span>
           <Link href={`/epoch/${epoch.id}`} className="hover:text-sepia transition-colors">{epoch.name}</Link>
           <span>/</span>

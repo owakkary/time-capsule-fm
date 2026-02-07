@@ -1,0 +1,228 @@
+{
+  "type": "FeatureCollection",
+  "name": "hellenistic-roman",
+  "epoch": "hellenistic-roman",
+  "centerCoordinates": [40, 35],
+  "defaultScale": 500,
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "macedonian-empire",
+        "name": "Macedonian Empire",
+        "type": "empire",
+        "color": "#FFD700",
+        "labelPosition": [45, 35]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [20, 42], [25, 42], [30, 40], [35, 38], [40, 36], [50, 34],
+          [55, 32], [60, 30], [65, 28], [68, 26], [65, 24], [60, 25],
+          [55, 26], [50, 28], [45, 30], [40, 32], [35, 34], [30, 36],
+          [25, 38], [22, 40], [20, 42]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "roman-empire",
+        "name": "Roman Empire",
+        "type": "empire",
+        "color": "#C9534D",
+        "labelPosition": [12.5, 42]
+      },
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [[
+            [-10, 36], [-9, 43], [-5, 44], [0, 43], [3, 43], [5, 44],
+            [7, 44], [9, 46], [12, 47], [15, 47], [18, 46], [20, 44],
+            [22, 42], [24, 41], [26, 41], [28, 42], [30, 42], [32, 40],
+            [35, 37], [36, 35], [35, 32], [32, 31], [28, 31], [25, 30],
+            [20, 32], [15, 33], [10, 38], [8, 40], [5, 42], [2, 41],
+            [0, 39], [-3, 37], [-6, 36], [-10, 36]
+          ]],
+          [[
+            [9, 38], [11, 39], [13, 41], [16, 42], [18, 41], [17, 39],
+            [15, 37], [12, 37], [10, 37], [9, 38]
+          ]],
+          [[
+            [12, 35], [15, 37], [17, 36], [15, 35], [13, 34], [12, 35]
+          ]]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "parthian-empire",
+        "name": "Parthian Empire",
+        "type": "empire",
+        "color": "#800000",
+        "labelPosition": [55, 34]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [42, 40], [48, 40], [55, 38], [60, 36], [65, 34], [68, 32],
+          [70, 28], [68, 25], [65, 24], [60, 25], [55, 27], [50, 28],
+          [45, 30], [42, 32], [40, 35], [42, 40]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "ptolemaic-egypt",
+        "name": "Ptolemaic Egypt",
+        "type": "empire",
+        "color": "#D4A574",
+        "labelPosition": [31, 27]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [25, 32], [28, 32], [30, 31], [32, 30], [35, 28], [36, 25],
+          [35, 22], [32, 20], [30, 22], [28, 24], [26, 26], [25, 28],
+          [24, 30], [25, 32]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "han-china",
+        "name": "Han Dynasty China",
+        "type": "empire",
+        "color": "#FF6B35",
+        "labelPosition": [110, 35]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [95, 42], [100, 44], [110, 44], [118, 42], [122, 38], [120, 34],
+          [118, 30], [115, 26], [110, 24], [105, 25], [100, 28], [97, 32],
+          [95, 36], [95, 42]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "land-mass",
+        "name": "Europe",
+        "type": "landmass"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-12, 36], [-10, 44], [-5, 48], [0, 51], [5, 55], [10, 58],
+          [15, 60], [25, 60], [35, 58], [40, 55], [45, 50], [40, 48],
+          [35, 46], [30, 45], [25, 44], [20, 45], [15, 47], [10, 48],
+          [5, 46], [0, 44], [-5, 42], [-10, 38], [-12, 36]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "land-africa",
+        "name": "Africa",
+        "type": "landmass"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-18, 35], [-15, 28], [-18, 20], [-15, 10], [-10, 5], [0, 5],
+          [10, 0], [20, -5], [30, 0], [40, 5], [45, 10], [50, 15],
+          [52, 20], [50, 25], [45, 28], [40, 30], [35, 32], [30, 33],
+          [25, 32], [20, 33], [15, 35], [10, 36], [5, 36], [0, 36],
+          [-5, 35], [-10, 35], [-18, 35]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "land-asia",
+        "name": "Asia",
+        "type": "landmass"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [26, 42], [30, 44], [35, 44], [40, 42], [50, 45], [60, 50],
+          [80, 55], [100, 55], [120, 50], [130, 45], [125, 35],
+          [120, 25], [110, 20], [100, 22], [90, 25], [80, 28],
+          [70, 30], [60, 32], [50, 35], [40, 35], [35, 36], [30, 38],
+          [26, 42]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "mediterranean-sea",
+        "name": "Mediterranean Sea",
+        "type": "water"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-6, 36], [-4, 37], [0, 38], [5, 40], [10, 42], [15, 43],
+          [20, 42], [25, 40], [30, 38], [35, 36], [36, 34], [35, 32],
+          [30, 31], [25, 31], [20, 32], [15, 33], [10, 35], [5, 36],
+          [0, 36], [-6, 36]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "black-sea",
+        "name": "Black Sea",
+        "type": "water"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [28, 42], [30, 44], [35, 44], [40, 43], [42, 42], [40, 41],
+          [35, 41], [30, 41], [28, 42]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "caspian-sea",
+        "name": "Caspian Sea",
+        "type": "water"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [48, 42], [50, 44], [52, 44], [54, 42], [54, 38], [52, 36],
+          [50, 37], [48, 39], [48, 42]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "red-sea",
+        "name": "Red Sea",
+        "type": "water"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [32, 30], [34, 28], [36, 24], [38, 20], [40, 15], [42, 12],
+          [44, 13], [42, 18], [40, 22], [38, 26], [36, 29], [34, 30],
+          [32, 30]
+        ]]
+      }
+    }
+  ]
+}

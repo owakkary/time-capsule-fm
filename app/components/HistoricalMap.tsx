@@ -3,8 +3,57 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { EpochId, EmpireId, getEmpiresForEpoch, getEmpire } from '@/types';
+import { GeographicMap } from './maps';
 
 interface HistoricalMapProps {
+  epochId: EpochId;
+  onSelectEmpire?: (empireId: EmpireId) => void;
+  /**
+   * Use the legacy SVG-file based map instead of the new D3 geographic map.
+   * The legacy map loads pre-designed SVGs from /public/maps/
+   * @default false
+   */
+  useLegacy?: boolean;
+}
+
+/**
+ * HistoricalMap component - renders an interactive historical map for a given epoch.
+ *
+ * Uses the new D3.js-based GeographicMap by default, which provides:
+ * - Accurate geographic boundaries using GeoJSON
+ * - Age of Empires-inspired visual styling
+ * - Terrain features (mountains, forests, deserts, cities)
+ * - Cartographic decorations (compass rose, scale bar, legend)
+ * - Smooth hover and click interactions
+ *
+ * Set useLegacy={true} to use the original SVG file-based approach.
+ */
+export default function HistoricalMap({
+  epochId,
+  onSelectEmpire,
+  useLegacy = false
+}: HistoricalMapProps) {
+  // Use legacy SVG-based map if requested
+  if (useLegacy) {
+    return <LegacyHistoricalMap epochId={epochId} onSelectEmpire={onSelectEmpire} />;
+  }
+
+  // Use new D3-based geographic map
+  return (
+    <GeographicMap
+      epochId={epochId}
+      onSelectEmpire={onSelectEmpire}
+      showDecorations={true}
+      showTerrain={true}
+    />
+  );
+}
+
+// ========================================
+// Legacy SVG-based map implementation
+// ========================================
+
+interface LegacyMapProps {
   epochId: EpochId;
   onSelectEmpire?: (empireId: EmpireId) => void;
 }
@@ -19,7 +68,11 @@ interface HoveredEmpire {
   y: number;
 }
 
-export default function HistoricalMap({ epochId, onSelectEmpire }: HistoricalMapProps) {
+/**
+ * Legacy HistoricalMap - loads pre-designed SVG maps from /public/maps/
+ * @deprecated Use the default GeographicMap implementation instead
+ */
+function LegacyHistoricalMap({ epochId, onSelectEmpire }: LegacyMapProps) {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
   const [svgContent, setSvgContent] = useState<string>('');
@@ -27,9 +80,14 @@ export default function HistoricalMap({ epochId, onSelectEmpire }: HistoricalMap
   const [isLoading, setIsLoading] = useState(true);
 
   const empires = getEmpiresForEpoch(epochId);
-  const mapPath = epochId === 'ancient-world'
-    ? '/maps/ancient-world.svg'
-    : '/maps/revolutionary-period.svg';
+  // Map SVG paths for legacy map support
+  const mapPathMap: Record<EpochId, string> = {
+    'bronze-age': '/maps/bronze-age.svg',
+    'classical': '/maps/classical.svg',
+    'hellenistic-roman': '/maps/hellenistic-roman.svg',
+    'revolutionary': '/maps/revolutionary.svg',
+  };
+  const mapPath = mapPathMap[epochId];
 
   // Load SVG content
   useEffect(() => {
@@ -193,8 +251,8 @@ export default function HistoricalMap({ epochId, onSelectEmpire }: HistoricalMap
         </div>
       )}
 
-      {/* Mobile fallback - Empire buttons */}
-      <div className="md:hidden mt-6 grid grid-cols-2 gap-3">
+      {/* Empire buttons - Always visible for easy navigation */}
+      <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
         {empires.map((empire) => (
           <button
             key={empire.id}

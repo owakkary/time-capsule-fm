@@ -1,5 +1,11 @@
 'use client';
 
+/**
+ * @deprecated Use GeographicMap from './maps' or HistoricalMap instead.
+ * This component uses simple circles for empires and is kept as a fallback
+ * for low-capability devices or testing purposes.
+ */
+
 import { useState } from 'react';
 import { EMPIRES, EpochId, EmpireId, getEmpiresForEpoch } from '@/types';
 
@@ -24,17 +30,31 @@ export default function InteractiveMap({
   // Get empire positions based on epoch
   const getEmpirePositions = (empireId: EmpireId): { x: number; y: number } => {
     const positions: Record<string, { x: number; y: number }> = {
-      // Ancient World positions (Mediterranean/Middle East focus)
+      // Bronze Age positions
       'ancient-egypt': { x: 210, y: 180 },
-      'persian-empire': { x: 340, y: 140 },
+      'mesopotamia': { x: 300, y: 140 },
+      'minoan-crete': { x: 180, y: 120 },
+      'mycenaean-greece': { x: 160, y: 100 },
+      'hittite-empire': { x: 260, y: 100 },
+      // Classical positions
       'classical-greece': { x: 180, y: 120 },
+      'persian-empire': { x: 340, y: 140 },
+      'phoenicia': { x: 240, y: 140 },
+      'carthage': { x: 140, y: 160 },
+      'roman-republic': { x: 120, y: 130 },
+      // Hellenistic/Roman positions
+      'macedonian-empire': { x: 200, y: 110 },
       'roman-empire': { x: 120, y: 130 },
-      // Revolutionary Period positions (World map)
+      'parthian-empire': { x: 350, y: 140 },
+      'ptolemaic-egypt': { x: 220, y: 180 },
+      'han-china': { x: 420, y: 120 },
+      // Revolutionary positions (World map)
       'british-empire': { x: 140, y: 80 },
       'french-empire': { x: 160, y: 110 },
-      'spanish-empire': { x: 100, y: 140 },
-      'qing-china': { x: 400, y: 130 },
       'united-states': { x: 80, y: 120 },
+      'qing-china': { x: 400, y: 130 },
+      'russian-empire': { x: 300, y: 60 },
+      'meiji-japan': { x: 450, y: 110 },
     };
     return positions[empireId] || { x: 250, y: 150 };
   };
@@ -116,7 +136,10 @@ export default function InteractiveMap({
         {/* Map title overlay */}
         <div className="absolute top-4 left-4 bg-white/80 backdrop-blur-sm px-3 py-1 rounded-lg">
           <span className="text-sm font-medium text-gray-700">
-            {epochId === 'ancient-world' ? 'Ancient World' : 'Revolutionary Period'}
+            {epochId === 'bronze-age' ? 'Bronze Age Mediterranean' :
+             epochId === 'classical' ? 'Classical Antiquity' :
+             epochId === 'hellenistic-roman' ? 'Hellenistic & Roman World' :
+             'Revolutionary Age'}
           </span>
         </div>
       </div>

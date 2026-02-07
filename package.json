@@ -6,25 +6,33 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "download-geo": "node scripts/download-natural-earth.js",
+    "download-geo:hires": "node scripts/download-natural-earth.js --high-res"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.14.0",
+    "@types/d3-geo": "^3.1.0",
+    "@types/d3-selection": "^3.0.11",
+    "@types/topojson-client": "^3.1.5",
+    "d3-geo": "^3.1.1",
+    "d3-selection": "^3.0.0",
     "firebase": "^10.7.0",
     "firebase-admin": "^12.0.0",
+    "lucide-react": "^0.294.0",
     "next": "14.0.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "@anthropic-ai/sdk": "^0.14.0",
-    "lucide-react": "^0.294.0"
+    "topojson-client": "^3.1.0"
   },
   "devDependencies": {
+    "@tailwindcss/forms": "^0.5.7",
     "@types/node": "^20.10.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
-    "typescript": "^5.3.0",
-    "tailwindcss": "^3.4.0",
-    "@tailwindcss/forms": "^0.5.7",
+    "autoprefixer": "^10.4.16",
     "postcss": "^8.4.32",
-    "autoprefixer": "^10.4.16"
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.3.0"
   }
 }
