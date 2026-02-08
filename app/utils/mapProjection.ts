@@ -1,6 +1,14 @@
 import * as d3Geo from 'd3-geo';
 import { EpochId, MapProjectionConfig, GeoBounds } from '@/types';
 
+// Leaflet-specific configurations per epoch
+export const LEAFLET_CONFIGS: Record<EpochId, { center: [number, number]; zoom: number; minZoom: number; maxZoom: number }> = {
+  'bronze-age': { center: [33, 32], zoom: 5, minZoom: 4, maxZoom: 8 },
+  'classical': { center: [36, 30], zoom: 4, minZoom: 3, maxZoom: 8 },
+  'hellenistic-roman': { center: [35, 50], zoom: 3, minZoom: 3, maxZoom: 8 },
+  'revolutionary': { center: [30, 0], zoom: 2, minZoom: 2, maxZoom: 6 },
+};
+
 // Epoch-specific projection configurations
 export const EPOCH_PROJECTIONS: Record<EpochId, MapProjectionConfig> = {
   'bronze-age': {

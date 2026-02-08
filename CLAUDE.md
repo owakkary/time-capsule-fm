@@ -168,3 +168,31 @@ Voice selection is in `lib/voice-mapping.ts`. Model: `eleven_multilingual_v2`.
 Female perspectives (5): `temple-priestess`, `mycenaean-queen`, `carthaginian-priestess`, `roman-matron`, `daughters-liberty`. All other 58 perspectives use male voice.
 
 Frontend pages pass `contentType` and `contentId` to `/api/tts` so the correct voice is selected.
+
+## Leaflet Map Architecture
+
+### Key Files
+- `app/components/maps/LeafletMap.tsx` — Main map component (react-leaflet)
+- `app/globals.css` — Leaflet CSS overrides in `LEAFLET MAP OVERRIDES` section
+- `app/utils/geoData.ts` — GeoJSON loading/filtering with caching
+- `app/utils/mapProjection.ts` — Per-epoch map configs (`LEAFLET_CONFIGS`, `EPOCH_BOUNDS`)
+- `public/geo/*.json` — GeoJSON data per epoch (bronze-age, classical, hellenistic-roman, revolutionary)
+
+### GeoJSON Feature Properties
+Empire features have: `id`, `name`, `type` ("empire"), `color` (hex), `interactive` (bool), `labelPosition` ([lng, lat])
+
+### Map Components (inside MapContainer)
+- `LegendControl` — Top-right legend with empire colors + Stamen credit
+- `CompassRoseControl` — Bottom-right compass rose
+- `EmpireLabelsControl` — Permanent empire name labels at `labelPosition` coordinates using `L.divIcon`
+- `EmpireTooltip` — Hover tooltip positioned relative to container
+
+### Territory Styling
+- Base: `fillOpacity: 0.7`, `weight: 3`, darker stroke via `darkenHex()` (30% darker than fill)
+- Hover: `fillOpacity: 0.85`, `weight: 4`
+- Attribution disabled on MapContainer; Stamen credit in legend instead
+- `.leaflet-interactive { cursor: pointer }` in globals.css
+- `.empire-label` styled with Georgia serif, sepia color, parchment text-shadow
+
+### Tile Layer
+Stamen Watercolor tiles via Stadia Maps CDN. Sepia filter applied via `.leaflet-tile-pane` CSS.
