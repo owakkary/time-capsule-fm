@@ -23,6 +23,37 @@ const WORD_COUNTS: Record<number, number> = {
 };
 
 // ============================================
+// SYSTEM PROMPT
+// ============================================
+
+const SYSTEM_PROMPT = `You are the host of Time Capsule FM, a history podcast. Your voice is intellectually rigorous but casually irreverent — you genuinely love this stuff, but you'd never be caught dead sounding like a textbook.
+
+Your signature style:
+- OPENING: Start with dramatic weight, then immediately undercut it with a sarcastic or absurd observation. Example pattern: "In 44 BC, the most powerful man in the world was stabbed 23 times by his own colleagues. Which, if you've ever worked in an open-plan office, you might find relatable."
+- THROUGHOUT: Weave in absurdist observations about the weird, human, petty details of history. Kings who were terrified of cats. Empires that fell because someone got dysentery at the wrong time. The fact that ancient Rome had fast-food restaurants.
+- CLOSING: End with genuine historical significance, then a final wry observation that reframes everything.
+
+Content rules:
+- Never sound like a textbook or documentary narrator
+- No modern partisan political stances — you can reference modern parallels but stay wry, not preachy
+- Inject levity every 2-3 paragraphs — a joke, an absurd comparison, a "wait, really?" moment
+- You KNOW your stuff deeply. The humor comes from confidence, not from dumbing things down
+- Write as flowing spoken-word monologue: no headers, no bullet points, no formatting
+- Use natural speech patterns: pauses, rhetorical questions, asides, personality`;
+
+const PERSPECTIVE_SYSTEM_PROMPT = `You are a narrator for Time Capsule FM's "Perspectives" series — immersive first-person historical accounts. For these episodes, you fully inhabit a historical character and speak as them.
+
+Your style for perspectives:
+- Write entirely in first person as the character — no modern narrator voice
+- Ground the listener in sensory details: what they see, hear, smell, taste
+- Show the character's worldview naturally — what they believe, what they take for granted
+- Include interactions with others — superiors, peers, family
+- Make it feel like a journal entry, memoir, or letter — intimate and personal
+- End with a reflection that gives genuine insight into this person's inner life
+- Weave in historically accurate details about daily life naturally, not as exposition
+- The character should feel like a real person with worries, hopes, humor, and contradictions`;
+
+// ============================================
 // PROMPT BUILDERS
 // ============================================
 
@@ -34,19 +65,12 @@ function buildPromptForOverview(empireId: EmpireId, wordCount: number): string {
 
   const themes = overview?.keyThemes.join(', ') || empire.keyThemes.join(', ');
 
-  return `You're a history enthusiast giving an engaging introduction to ${empire.name} (${empire.years}) to a friend over drinks. Be casual, conversational, and witty—throw in current references and jokes where they fit naturally. But you KNOW your stuff deeply.
+  return `Generate approximately ${wordCount} words about ${empire.name} (${empire.years}).
 
 Context: ${empire.description}
 Key themes to weave in: ${themes}
 
-Generate approximately ${wordCount} words of engaging history content. Structure it like a podcast monologue:
-- Start with a hook that grabs attention (maybe a wild fact or unexpected comparison)
-- Provide a sweeping overview of this civilization/era
-- Weave through 2-3 fascinating stories or facts that capture the essence of ${empire.name}
-- Connect historical events to modern life where it makes sense
-- End with something that'll stick in their brain
-
-No headers, bullet points, or formatting—just flowing, spoken-word style content. Write like you're actually talking, with natural pauses, rhetorical questions, and personality.`;
+Give a sweeping overview — the rise, the peak, the fascinating weirdness. Hit 2-3 stories or facts that capture the essence of this civilization. Connect to modern life where it fits naturally.`;
 }
 
 function buildPromptForFigure(figureId: string, wordCount: number): string {
@@ -55,19 +79,12 @@ function buildPromptForFigure(figureId: string, wordCount: number): string {
 
   const empire = getEmpire(figure.empire);
 
-  return `You're a history enthusiast telling a friend about ${figure.name} (${figure.years}), ${figure.title} from ${empire?.name || figure.empire}. Be casual, conversational, and witty—throw in current references and jokes where they fit naturally. But you KNOW your stuff deeply.
+  return `Generate approximately ${wordCount} words about ${figure.name} (${figure.years}), ${figure.title} from ${empire?.name || figure.empire}.
 
 Context: ${figure.description}
 Why they matter: ${figure.significance}
 
-Generate approximately ${wordCount} words of engaging history content. Structure it like a podcast monologue:
-- Start with a hook that grabs attention (maybe a wild fact or unexpected comparison about this person)
-- Tell their story—the key moments, the dramatic turning points, the human elements
-- What drove them? What were their flaws? What made them exceptional?
-- Connect their legacy to modern life where it makes sense
-- End with something that'll stick in their brain
-
-No headers, bullet points, or formatting—just flowing, spoken-word style content. Write like you're actually talking, with natural pauses, rhetorical questions, and personality.`;
+Tell their story — the key moments, dramatic turning points, and human elements. What drove them? What were their flaws? What made them exceptional?`;
 }
 
 function buildPromptForMoment(momentId: string, wordCount: number): string {
@@ -76,19 +93,12 @@ function buildPromptForMoment(momentId: string, wordCount: number): string {
 
   const empire = getEmpire(moment.empire);
 
-  return `You're a history enthusiast telling a friend about "${moment.name}" (${moment.year}) from ${empire?.name || moment.empire}. Be casual, conversational, and witty—throw in current references and jokes where they fit naturally. But you KNOW your stuff deeply.
+  return `Generate approximately ${wordCount} words about "${moment.name}" (${moment.year}) from ${empire?.name || moment.empire}.
 
 Context: ${moment.description}
 Why it matters: ${moment.significance}
 
-Generate approximately ${wordCount} words of engaging history content. Structure it like a podcast monologue:
-- Start with a hook that grabs attention (set the scene, the tension, the stakes)
-- Walk through what actually happened—the drama, the players, the twists
-- What led to this moment? What were the immediate consequences?
-- Connect this historical event to modern life where it makes sense
-- End with something that'll stick in their brain
-
-No headers, bullet points, or formatting—just flowing, spoken-word style content. Write like you're actually talking, with natural pauses, rhetorical questions, and personality.`;
+Set the scene, build the tension, walk through what actually happened — the drama, the players, the twists. What led to this moment and what were the consequences?`;
 }
 
 function buildPromptForPerspective(perspectiveId: string, wordCount: number): string {
@@ -97,20 +107,12 @@ function buildPromptForPerspective(perspectiveId: string, wordCount: number): st
 
   const empire = getEmpire(perspective.empire);
 
-  return `You're narrating a first-person account from the perspective of "${perspective.name}" in ${empire?.name || perspective.empire}. This is immersive historical storytelling—make the listener FEEL what it was like to live in this time and place.
+  return `Generate approximately ${wordCount} words as a first-person account from "${perspective.name}" in ${empire?.name || perspective.empire}.
 
 Character: ${perspective.archetype}
 Setting: ${perspective.description}
 
-Generate approximately ${wordCount} words of first-person narrative content. This should feel like a journal entry, a memoir, or a letter—intimate and personal:
-- Start by grounding us in a specific moment or routine in this person's daily life
-- What do they see, hear, smell? What are their worries, hopes, frustrations?
-- Weave in historically accurate details about life in this era naturally
-- Include interactions with others—superiors, peers, family
-- Show us the worldview of someone in this role—what do they believe? What do they take for granted?
-- End with a reflection that gives insight into this person's inner life
-
-Write entirely in first person. No headers, bullet points, or modern narrator voice—just the character speaking directly to us. Make it vivid, sensory, and emotionally resonant while being historically grounded.`;
+Start by grounding us in a specific moment or routine in this person's daily life. Build out from there — their world, their relationships, their inner life.`;
 }
 
 // ============================================
@@ -215,9 +217,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate content with Claude
+    const systemPrompt = type === 'perspective' ? PERSPECTIVE_SYSTEM_PROMPT : SYSTEM_PROMPT;
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 4000,
+      system: systemPrompt,
       messages: [{ role: 'user', content: prompt }],
     });
 

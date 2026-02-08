@@ -77,6 +77,7 @@ export default function EpisodeGenerator({ onEpisodeGenerated }: EpisodeGenerato
         body: JSON.stringify({
           episodeId: episode.id,
           text: episode.content,
+          contentType: 'overview',
         }),
       });
 

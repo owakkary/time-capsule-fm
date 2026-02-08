@@ -66,6 +66,8 @@ export default function FigurePage({ params }: { params: { id: string } }) {
           body: JSON.stringify({
             episodeId: data.id,
             text: data.content,
+            contentType: 'figure',
+            contentId: figureId,
           }),
         });
       } catch (ttsError) {

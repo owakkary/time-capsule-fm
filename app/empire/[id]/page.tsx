@@ -74,6 +74,7 @@ export default function EmpirePage({ params }: { params: { id: string } }) {
           body: JSON.stringify({
             episodeId: data.id,
             text: data.content,
+            contentType: 'overview',
           }),
         });
       } catch (ttsError) {

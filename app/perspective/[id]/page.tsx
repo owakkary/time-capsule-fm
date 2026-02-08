@@ -66,6 +66,8 @@ export default function PerspectivePage({ params }: { params: { id: string } }) 
           body: JSON.stringify({
             episodeId: data.id,
             text: data.content,
+            contentType: 'perspective',
+            contentId: perspectiveId,
           }),
         });
       } catch (ttsError) {

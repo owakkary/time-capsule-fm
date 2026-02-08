@@ -66,6 +66,8 @@ export default function MomentPage({ params }: { params: { id: string } }) {
           body: JSON.stringify({
             episodeId: data.id,
             text: data.content,
+            contentType: 'moment',
+            contentId: momentId,
           }),
         });
       } catch (ttsError) {

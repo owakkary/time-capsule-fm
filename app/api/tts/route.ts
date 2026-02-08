@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuthToken, getAdminDb, getAdminStorage } from '@/lib/firebase-admin';
+import { getVoiceId } from '@/lib/voice-mapping';
+import { ContentType } from '@/types';
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,7 +19,7 @@ export async function POST(request: NextRequest) {
     const userId = decodedToken.uid;
 
     const body = await request.json();
-    const { episodeId, text } = body;
+    const { episodeId, text, contentType, contentId } = body;
 
     if (!episodeId || !text) {
       return NextResponse.json(
@@ -45,9 +47,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate audio with ElevenLabs
-    const voiceId = process.env.ELEVENLABS_VOICE_ID || 'pNInz6obpgDQGcFmaJgB';
-    
+    // Select voice based on content type
+    const voiceId = getVoiceId(contentType as ContentType | undefined, contentId);
+
     const response = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
       {
@@ -59,7 +61,7 @@ export async function POST(request: NextRequest) {
         },
         body: JSON.stringify({
           text,
-          model_id: 'eleven_monolingual_v1',
+          model_id: 'eleven_multilingual_v2',
           voice_settings: {
             stability: 0.5,
             similarity_boost: 0.75,
