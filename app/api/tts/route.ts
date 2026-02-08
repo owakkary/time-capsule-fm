@@ -3,6 +3,9 @@ import { verifyAuthToken, getAdminDb, getAdminStorage } from '@/lib/firebase-adm
 import { getVoiceId } from '@/lib/voice-mapping';
 import { ContentType } from '@/types';
 
+// Allow up to 60 seconds for TTS generation + upload
+export const maxDuration = 60;
+
 export async function POST(request: NextRequest) {
   try {
     // Verify user is authenticated
@@ -74,9 +77,9 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('ElevenLabs error:', errorText);
+      console.error('ElevenLabs error:', { status: response.status, voiceId, contentType, contentId, error: errorText });
       return NextResponse.json(
-        { error: 'Failed to generate audio' },
+        { error: 'Failed to generate audio', details: errorText },
         { status: 500 }
       );
     }

@@ -13,7 +13,8 @@ Time Capsule FM is a history exploration app that generates AI-powered podcast e
 - **Styling**: Tailwind CSS with custom color palette (parchment, brass, sepia theme)
 - **Database**: Firebase Firestore
 - **Authentication**: Firebase Auth
-- **AI**: Claude API for episode generation, ElevenLabs for TTS
+- **AI**: Claude API (Sonnet) for episode generation, ElevenLabs for TTS
+- **Hosting**: Vercel (https://time-capsule-fm.vercel.app)
 - **Package Manager**: npm
 
 ## Key Commands
@@ -24,6 +25,9 @@ npm run dev
 
 # Build
 npm run build
+
+# Deploy to Vercel (production)
+vercel --prod
 
 # Deploy Firestore rules
 firebase deploy --only firestore:rules --project time-capsule-fm
@@ -51,6 +55,7 @@ hooks/
 lib/
 ├── badges.ts            # Badge definitions and utilities
 ├── seed-data/           # Static content (figures, moments, perspectives)
+├── voice-mapping.ts     # TTS voice selection by content type
 └── xp.ts               # XP/leveling calculations
 
 public/
@@ -138,3 +143,28 @@ Categories: Milestone (8), Discovery (5), Mastery (7), Streak (3), Special (4)
 
 ### Empire Icons (21 total)
 One icon per empire across 4 epochs, each with civilization-specific imagery.
+
+## Content Generation
+
+### Host Persona (System Prompt)
+The Time Capsule FM host voice is defined in `app/api/generate/route.ts` via `SYSTEM_PROMPT`:
+- Intellectually rigorous but casually irreverent
+- Opening pattern: dramatic weight + sarcastic deflation
+- Absurdist observations about weird/human/petty historical details
+- Closing: historical significance + wry reframing
+- No textbook tone, no modern partisan stances, levity every 2-3 paragraphs
+
+Perspective episodes use a separate `PERSPECTIVE_SYSTEM_PROMPT` (first-person immersive narration).
+
+### TTS Voices (ElevenLabs)
+Voice selection is in `lib/voice-mapping.ts`. Model: `eleven_multilingual_v2`.
+
+| Voice | ID | Used For |
+|-------|----|----------|
+| Julian (British) | `9IzcwKmvwJcw58h3KnlH` | Host — overviews, figures, moments |
+| George (British, warm) | `JBFqnCBsd6RMkjVDRZzb` | Male perspective characters |
+| Lily (British, warm) | `pFZP5JQG7iQjIQuC4Bku` | Female perspective characters |
+
+Female perspectives (5): `temple-priestess`, `mycenaean-queen`, `carthaginian-priestess`, `roman-matron`, `daughters-liberty`. All other 58 perspectives use male voice.
+
+Frontend pages pass `contentType` and `contentId` to `/api/tts` so the correct voice is selected.

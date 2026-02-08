@@ -1,5 +1,4 @@
 import { ContentType } from '@/types';
-import { getPerspective } from '@/lib/firebase-admin';
 
 // ElevenLabs voice IDs
 const VOICES = {

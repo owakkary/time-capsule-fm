@@ -65,7 +65,7 @@ export default function EmpirePage({ params }: { params: { id: string } }) {
 
       // Generate audio (non-fatal)
       try {
-        await fetch('/api/tts', {
+        const ttsResponse = await fetch('/api/tts', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -77,6 +77,10 @@ export default function EmpirePage({ params }: { params: { id: string } }) {
             contentType: 'overview',
           }),
         });
+        if (!ttsResponse.ok) {
+          const ttsErrorData = await ttsResponse.json().catch(() => ({}));
+          console.error('TTS failed:', ttsResponse.status, ttsErrorData);
+        }
       } catch (ttsError) {
         console.error('TTS error (non-fatal):', ttsError);
       }

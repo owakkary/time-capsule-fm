@@ -3,6 +3,9 @@ import Anthropic from '@anthropic-ai/sdk';
 import { verifyAuthToken, getAdminDb, getFigure, getMoment, getPerspective, getOverview } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { ContentType, EmpireId, EpochId, getEmpire, EMPIRE_TO_EPOCH } from '@/types';
+
+// Allow up to 60 seconds for AI content generation
+export const maxDuration = 60;
 import {
   XP_REWARDS,
   calculateLevelFromXP,
