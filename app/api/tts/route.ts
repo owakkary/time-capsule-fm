@@ -112,9 +112,10 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('TTS error:', error);
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('TTS error:', message, error);
     return NextResponse.json(
-      { error: 'Failed to generate audio' },
+      { error: 'Failed to generate audio', details: message },
       { status: 500 }
     );
   }
