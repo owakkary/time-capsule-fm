@@ -679,7 +679,7 @@
   }
 
   .leaflet-tile-pane {
-    filter: sepia(30%) saturate(80%) brightness(105%);
+    filter: sepia(40%) saturate(70%) brightness(108%);
   }
 
   .leaflet-control-zoom a {
