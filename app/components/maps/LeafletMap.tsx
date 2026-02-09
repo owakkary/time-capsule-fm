@@ -54,7 +54,7 @@ function LegendControl({ epochId }: { epochId: EpochId }) {
         `;
       });
 
-      html += `<div style="margin-top:8px;padding-top:4px;border-top:1px solid rgba(201,166,107,0.3);font-size:9px;color:#8B7355;line-height:1.3;">Map tiles by <a href="https://stamen.com" target="_blank" rel="noopener" style="color:#8B7355;text-decoration:underline;">Stamen Design</a></div>`;
+      html += `<div style="margin-top:8px;padding-top:4px;border-top:1px solid rgba(201,166,107,0.3);font-size:9px;color:#8B7355;line-height:1.3;">Map tiles by <a href="https://carto.com" target="_blank" rel="noopener" style="color:#8B7355;text-decoration:underline;">CARTO</a></div>`;
 
       div.innerHTML = html;
 
@@ -432,8 +432,8 @@ export default function LeafletMap({
           <ZoomControl position="topleft" />
 
           <TileLayer
-            url="https://tiles.stadiamaps.com/tiles/stamen_watercolor/{z}/{x}/{y}.jpg"
-            attribution='&copy; <a href="https://stamen.com">Stamen Design</a>'
+            url="https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png"
+            attribution='&copy; <a href="https://carto.com">CARTO</a>'
           />
 
           <GeoJSON
