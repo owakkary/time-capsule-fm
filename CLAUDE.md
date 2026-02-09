@@ -177,12 +177,14 @@ Frontend pages pass `contentType` and `contentId` to `/api/tts` so the correct v
 - `app/utils/geoData.ts` — GeoJSON loading/filtering with caching
 - `app/utils/mapProjection.ts` — Per-epoch map configs (`LEAFLET_CONFIGS`, `EPOCH_BOUNDS`)
 - `public/geo/*.json` — GeoJSON data per epoch (bronze-age, classical, hellenistic-roman, revolutionary)
+- `scripts/generate_territories.py` — Generates pre-clip GeoJSON with waypoint-based borders
+- `scripts/clip_to_coastline.py` — Clips territories to Natural Earth 50m land boundaries
 
 ### GeoJSON Feature Properties
 Empire features have: `id`, `name`, `type` ("empire"), `color` (hex), `interactive` (bool), `labelPosition` ([lng, lat])
 
 ### Map Components (inside MapContainer)
-- `LegendControl` — Top-right legend with empire colors + Stamen credit
+- `LegendControl` — Top-right legend with empire colors + Esri credit
 - `CompassRoseControl` — Bottom-right compass rose
 - `EmpireLabelsControl` — Permanent empire name labels at `labelPosition` coordinates using `L.divIcon`
 - `EmpireTooltip` — Hover tooltip positioned relative to container
@@ -190,9 +192,30 @@ Empire features have: `id`, `name`, `type` ("empire"), `color` (hex), `interacti
 ### Territory Styling
 - Base: `fillOpacity: 0.7`, `weight: 3`, darker stroke via `darkenHex()` (30% darker than fill)
 - Hover: `fillOpacity: 0.85`, `weight: 4`
-- Attribution disabled on MapContainer; Stamen credit in legend instead
+- Attribution disabled on MapContainer; Esri credit in legend instead
 - `.leaflet-interactive { cursor: pointer }` in globals.css
 - `.empire-label` styled with Georgia serif, sepia color, parchment text-shadow
 
 ### Tile Layer
-Stamen Watercolor tiles via Stadia Maps CDN. Sepia filter applied via `.leaflet-tile-pane` CSS.
+Esri World Physical Map tiles (terrain/topography only, no political borders). CSS filter: `sepia(40%) saturate(70%) brightness(108%)` via `.leaflet-tile-pane`.
+
+### GeoJSON Generation Pipeline
+Two-step process to create realistic territory borders:
+
+1. **Generate** (`scripts/generate_territories.py`):
+   - Defines territory shapes using waypoints that follow geographic features (mountains, rivers, desert edges)
+   - Gaussian perturbation between waypoints for natural-looking border irregularity
+   - Coastal territories use oversized simple shapes (clipping handles coastlines)
+   - Inland territories use detailed waypoints following geographic features
+   - Amplitude settings: MOUNTAIN=0.25, RIVER=0.12, DESERT=0.18
+   - Random seed 42 for reproducibility
+
+2. **Clip** (`scripts/clip_to_coastline.py`):
+   - Downloads Natural Earth 50m land polygon data (`ne_50m_land.shp` from naciscdn.org)
+   - Intersects each territory with land polygon so coastal edges follow real geography
+   - Buffer: 0.02° (just enough for coastline coverage — larger values round inland borders)
+   - Simplifies result (tolerance 0.015°), removes tiny fragments (area < 0.005 sq deg)
+   - Rounds coordinates to 2 decimal places
+   - Dependencies: `shapely`, `pyshp`
+
+**To regenerate territories**: `python scripts/generate_territories.py && python scripts/clip_to_coastline.py`
