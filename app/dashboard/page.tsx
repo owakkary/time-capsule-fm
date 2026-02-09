@@ -70,7 +70,7 @@ export default function DashboardPage() {
         {/* Hero - always visible but compact when map is shown */}
         <div className={`text-center mb-8 opacity-0 animate-fade-in-up transition-all duration-500 ${selectedEpoch ? 'mb-6' : 'mb-8'}`}>
           <h2 className={`font-display font-bold text-ink tracking-tight transition-all duration-500 ${selectedEpoch ? 'text-3xl md:text-4xl' : 'text-4xl md:text-5xl'}`}>
-            Your Personal History Podcast
+            Your Personal History Journey
           </h2>
           {!selectedEpoch && (
             <p className="text-lg text-sepia-light text-balance mt-3 max-w-2xl mx-auto">
