@@ -10,6 +10,7 @@ import EpochCard from '@/app/components/EpochCard';
 import HistoricalMap from '@/app/components/HistoricalMap';
 import { ExplorerCard } from '@/app/components/accolades';
 import { AppHeader } from '@/app/components/layout';
+import PersonalizedHome from '@/app/components/PersonalizedHome';
 
 export default function DashboardPage() {
   const { user, loading, signOut } = useAuth();
@@ -66,6 +67,9 @@ export default function DashboardPage() {
             />
           </div>
         )}
+
+        {/* Personalized Recommendations - show when no epoch selected */}
+        {!selectedEpoch && <PersonalizedHome />}
 
         {/* Hero - always visible but compact when map is shown */}
         <div className={`text-center mb-8 opacity-0 animate-fade-in-up transition-all duration-500 ${selectedEpoch ? 'mb-6' : 'mb-8'}`}>

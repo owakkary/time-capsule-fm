@@ -50,10 +50,13 @@ app/
 
 hooks/
 ├── useAuth.ts           # Firebase authentication
+├── useEventLogger.ts    # Fire-and-forget engagement event dispatch (NEW)
 └── useExplorerProgress.ts  # User progress tracking
 
 lib/
 ├── badges.ts            # Badge definitions and utilities
+├── interest-profile.ts  # Profile counters + Claude analysis (NEW)
+├── recommendations.ts   # Recommendation prompt builders + catalog (NEW)
 ├── seed-data/           # Static content (figures, moments, perspectives)
 ├── voice-mapping.ts     # TTS voice selection by content type
 └── xp.ts               # XP/leveling calculations
@@ -98,8 +101,11 @@ users/{userId}/
 │   └── profile/
 │       ├── empires/{empireId}    # EmpireProgress
 │       ├── epochs/{epochId}      # EpochProgress
-│       └── badges/{badgeId}      # EarnedBadge
-└── episodes/{episodeId}          # Generated episodes
+│       ├── badges/{badgeId}      # EarnedBadge
+│       ├── events/{auto-id}      # EngagementEvent (NEW - adaptive content engine)
+│       ├── interests             # UserInterestProfile (NEW - single doc)
+│       └── rate-limits/recommend # Rate limit tracking (NEW)
+└── episodes/{episodeId}          # Generated episodes (global collection)
 ```
 
 ### Key Types
@@ -107,6 +113,9 @@ users/{userId}/
 - `EmpireProgress`: Completion %, rank, discovered content per empire
 - `EpochProgress`: Completion % per epoch
 - `EarnedBadge`: Unlock status, progress, pinned state
+- `EngagementEvent`: Tracks episode_started/completed/abandoned/replayed, recommendation clicks/skips
+- `UserInterestProfile`: Counters (empire/epoch/contentType/tag) + Claude-analyzed fields (inferredInterests, knowledgeGaps, etc.)
+- `Recommendation` / `RecommendationResponse`: Personalized episode suggestions with host-voice pitches
 
 ## Common Issues & Solutions
 

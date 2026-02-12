@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
-import { getEmpire, EPOCHS } from '@/types';
+import { useEventLogger } from '@/hooks/useEventLogger';
+import { getEmpire, EPOCHS, EmpireId, EpochId, ContentType } from '@/types';
 
 interface Episode {
   id: string;
@@ -22,6 +23,7 @@ interface Episode {
 export default function EpisodePage({ params }: { params: { id: string } }) {
   const episodeId = params.id;
   const { user, loading, signOut, getIdToken } = useAuth();
+  const { logEvent } = useEventLogger();
   const router = useRouter();
   const [episode, setEpisode] = useState<Episode | null>(null);
   const [loadingEpisode, setLoadingEpisode] = useState(true);
@@ -29,6 +31,38 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const audioRef = useRef<HTMLAudioElement>(null);
+
+  // Engagement tracking refs
+  const hasStartedRef = useRef(false);
+  const hasCompletedRef = useRef(false);
+
+  const getEventFields = useCallback(() => ({
+    episodeId,
+    empire: episode?.empire as EmpireId | undefined,
+    epoch: episode?.epoch as EpochId | undefined,
+    contentType: episode?.contentType as ContentType | undefined,
+  }), [episodeId, episode]);
+
+  // Track episode_abandoned on unmount / beforeunload
+  useEffect(() => {
+    const handleAbandon = () => {
+      if (hasStartedRef.current && !hasCompletedRef.current && episode) {
+        const pct = duration > 0 ? Math.round((progress / duration) * 100) : 0;
+        logEvent({
+          eventType: 'episode_abandoned',
+          ...getEventFields(),
+          completionPercentage: pct,
+        });
+      }
+    };
+
+    window.addEventListener('beforeunload', handleAbandon);
+    return () => {
+      window.removeEventListener('beforeunload', handleAbandon);
+      handleAbandon();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [episode, duration, progress, logEvent, getEventFields]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -76,13 +110,36 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
       audioRef.current.pause();
     } else {
       audioRef.current.play();
+
+      // Fire episode_started on first play
+      if (!hasStartedRef.current) {
+        hasStartedRef.current = true;
+        logEvent({ eventType: 'episode_started', ...getEventFields() });
+      }
+
+      // Fire episode_replayed if playing again after completion
+      if (hasCompletedRef.current) {
+        logEvent({ eventType: 'episode_replayed', ...getEventFields() });
+      }
     }
     setIsPlaying(!isPlaying);
   };
 
   const handleTimeUpdate = () => {
     if (!audioRef.current) return;
-    setProgress(audioRef.current.currentTime);
+    const currentTime = audioRef.current.currentTime;
+    const dur = audioRef.current.duration;
+    setProgress(currentTime);
+
+    // Fire episode_completed when >= 90% listened
+    if (!hasCompletedRef.current && dur > 0 && currentTime / dur >= 0.9) {
+      hasCompletedRef.current = true;
+      logEvent({
+        eventType: 'episode_completed',
+        ...getEventFields(),
+        completionPercentage: Math.round((currentTime / dur) * 100),
+      });
+    }
   };
 
   const handleLoadedMetadata = () => {
@@ -194,7 +251,17 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
                 src={episode.audioUrl}
                 onTimeUpdate={handleTimeUpdate}
                 onLoadedMetadata={handleLoadedMetadata}
-                onEnded={() => setIsPlaying(false)}
+                onEnded={() => {
+                  setIsPlaying(false);
+                  if (!hasCompletedRef.current) {
+                    hasCompletedRef.current = true;
+                    logEvent({
+                      eventType: 'episode_completed',
+                      ...getEventFields(),
+                      completionPercentage: 100,
+                    });
+                  }
+                }}
               />
 
               <div className="flex items-center gap-4">

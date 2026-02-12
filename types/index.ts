@@ -800,3 +800,72 @@ export interface ProgressUpdateResult {
   streakUpdated: boolean;
   newStreak: number;
 }
+
+// ============================================
+// ADAPTIVE CONTENT ENGINE
+// ============================================
+
+// Engagement event types for tracking user behavior
+export type EngagementEventType =
+  | 'episode_started'
+  | 'episode_completed'
+  | 'episode_abandoned'
+  | 'episode_replayed'
+  | 'recommendation_clicked'
+  | 'recommendation_skipped';
+
+// Engagement event stored at users/{userId}/explorer/profile/events/{auto-id}
+export interface EngagementEvent {
+  userId: string;
+  eventType: EngagementEventType;
+  episodeId?: string;
+  empire?: EmpireId;
+  epoch?: EpochId;
+  contentType?: ContentType;
+  contentId?: string;
+  completionPercentage?: number;
+  recommendationId?: string;
+  metadata?: Record<string, unknown>;
+  createdAt: Date;
+}
+
+// Interest profile stored at users/{userId}/explorer/profile/interests
+export interface UserInterestProfile {
+  // Counter-based fields (updated atomically)
+  empireCounts: Record<string, number>;
+  epochCounts: Record<string, number>;
+  contentTypeCounts: Record<string, number>;
+  tagCounts: Record<string, number>;
+  completedEpisodeIds: string[];
+  totalEpisodesStarted: number;
+  totalEpisodesCompleted: number;
+
+  // Claude-analyzed fields (updated lazily)
+  inferredInterests: string[];
+  knowledgeGaps: string[];
+  personalityNotes: string;
+  explorationStyle: string;
+  lastAnalyzedAt: Date | null;
+
+  updatedAt: Date;
+}
+
+// A single recommendation from the engine
+export interface Recommendation {
+  id: string;
+  empire: EmpireId;
+  epoch: EpochId;
+  contentType: ContentType;
+  contentId?: string;
+  title: string;
+  hostPitch: string;
+  reason: string;
+  confidence: number;
+}
+
+// Full response from POST /api/recommend
+export interface RecommendationResponse {
+  recommendations: Recommendation[];
+  welcomeBack: string;
+  isNewUser: boolean;
+}
