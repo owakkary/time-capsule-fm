@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   User,
   onAuthStateChanged,
@@ -99,11 +99,11 @@ export function useAuth() {
     }
   };
 
-  // Get ID token for API calls
-  const getIdToken = async () => {
+  // Get ID token for API calls (stable reference — only changes when user changes)
+  const getIdToken = useCallback(async () => {
     if (!user) return null;
     return await user.getIdToken();
-  };
+  }, [user]);
 
   return {
     user,

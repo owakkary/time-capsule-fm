@@ -35,6 +35,14 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
   // Engagement tracking refs
   const hasStartedRef = useRef(false);
   const hasCompletedRef = useRef(false);
+  const progressRef = useRef(0);
+  const durationRef = useRef(0);
+  const logEventRef = useRef(logEvent);
+  const episodeRef = useRef(episode);
+
+  // Keep refs in sync without triggering effects
+  logEventRef.current = logEvent;
+  episodeRef.current = episode;
 
   const getEventFields = useCallback(() => ({
     episodeId,
@@ -43,14 +51,17 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
     contentType: episode?.contentType as ContentType | undefined,
   }), [episodeId, episode]);
 
-  // Track episode_abandoned on unmount / beforeunload
+  const getEventFieldsRef = useRef(getEventFields);
+  getEventFieldsRef.current = getEventFields;
+
+  // Track episode_abandoned on unmount / beforeunload (fires ONCE on leave)
   useEffect(() => {
     const handleAbandon = () => {
-      if (hasStartedRef.current && !hasCompletedRef.current && episode) {
-        const pct = duration > 0 ? Math.round((progress / duration) * 100) : 0;
-        logEvent({
+      if (hasStartedRef.current && !hasCompletedRef.current && episodeRef.current) {
+        const pct = durationRef.current > 0 ? Math.round((progressRef.current / durationRef.current) * 100) : 0;
+        logEventRef.current({
           eventType: 'episode_abandoned',
-          ...getEventFields(),
+          ...getEventFieldsRef.current(),
           completionPercentage: pct,
         });
       }
@@ -61,8 +72,7 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
       window.removeEventListener('beforeunload', handleAbandon);
       handleAbandon();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [episode, duration, progress, logEvent, getEventFields]);
+  }, []);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -130,6 +140,7 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
     const currentTime = audioRef.current.currentTime;
     const dur = audioRef.current.duration;
     setProgress(currentTime);
+    progressRef.current = currentTime;
 
     // Fire episode_completed when >= 90% listened
     if (!hasCompletedRef.current && dur > 0 && currentTime / dur >= 0.9) {
@@ -145,6 +156,7 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
   const handleLoadedMetadata = () => {
     if (!audioRef.current) return;
     setDuration(audioRef.current.duration);
+    durationRef.current = audioRef.current.duration;
   };
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
