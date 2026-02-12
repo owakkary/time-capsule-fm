@@ -11,7 +11,7 @@ export async function updateInterestProfileCounters(
   userId: string,
   event: EngagementEvent
 ): Promise<void> {
-  const profileRef = db.doc(`users/${userId}/explorer/profile/interests`);
+  const profileRef = db.doc(`users/${userId}/explorer/profile/interests/current`);
 
   const updates: Record<string, FirebaseFirestore.FieldValue | string[]> = {
     updatedAt: FieldValue.serverTimestamp(),
@@ -55,7 +55,7 @@ export async function analyzeInterestProfile(
   db: FirebaseFirestore.Firestore,
   userId: string
 ): Promise<UserInterestProfile | null> {
-  const profileRef = db.doc(`users/${userId}/explorer/profile/interests`);
+  const profileRef = db.doc(`users/${userId}/explorer/profile/interests/current`);
   const doc = await profileRef.get();
 
   if (!doc.exists) {
