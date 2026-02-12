@@ -170,7 +170,7 @@ export default function PerspectivePage({ params }: { params: { id: string } }) 
                   <span className="px-3 py-1 bg-brass/20 rounded-sm text-sm font-display font-medium text-brass-light">
                     {perspective.archetype}
                   </span>
-                  <span className="tag-empire text-sm">
+                  <span className="px-3 py-1 bg-brass/20 rounded-sm text-sm font-display font-medium text-brass-light">
                     {empire.name}
                   </span>
                 </div>
