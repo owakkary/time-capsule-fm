@@ -4,7 +4,9 @@ This file provides guidance to Claude Code when working with code in this reposi
 
 ## Project Overview
 
-Time Capsule FM is a history exploration app that generates AI-powered podcast episodes about historical empires, figures, moments, and perspectives. Users progress through epochs (Bronze Age, Classical, Hellenistic-Roman, Revolutionary) exploring 21 different empires and earning badges for their achievements.
+Time Capsule FM is a history exploration app: a guided audio journey through historical empires, figures, moments, and perspectives. Users progress through epochs (Bronze Age, Classical, Hellenistic-Roman, Revolutionary) exploring 21 different empires and earning badges for their achievements.
+
+All 189 episodes (21 overviews + 42 figures + 63 moments + 63 perspectives) are **pre-generated once** into a shared, public `contentLibrary` Firestore collection + Storage audio files — the deployed app never calls Claude or ElevenLabs at request time. This keeps marginal cost at zero regardless of user count. See "Content Library" below.
 
 ## Tech Stack
 
@@ -13,7 +15,7 @@ Time Capsule FM is a history exploration app that generates AI-powered podcast e
 - **Styling**: Tailwind CSS with custom color palette (parchment, brass, sepia theme)
 - **Database**: Firebase Firestore
 - **Authentication**: Firebase Auth
-- **AI**: Claude API (Sonnet) for episode generation, ElevenLabs for TTS
+- **Content generation**: one-time offline batch script (`scripts/generate-content-library.ts`) using Claude (Sonnet) + ElevenLabs — not called by the deployed app
 - **Hosting**: Vercel (https://time-capsule-fm.vercel.app)
 - **Package Manager**: npm
 
@@ -31,6 +33,12 @@ vercel --prod
 
 # Deploy Firestore rules
 firebase deploy --only firestore:rules --project time-capsule-fm
+
+# Preview the one-time content library batch job (no API calls, free)
+npm run generate-library:dry-run
+
+# Run the batch job for real (spends Anthropic + ElevenLabs credits, idempotent/resumable)
+npm run generate-library
 ```
 
 ## Project Structure
@@ -38,28 +46,33 @@ firebase deploy --only firestore:rules --project time-capsule-fm
 ```
 app/
 ├── accolades/           # Profile/badges page
-├── api/                 # API routes (generate, episodes, progress)
+├── api/                 # API routes (recommend, progress, events, catalog reads)
 ├── components/
 │   ├── accolades/       # Badge, avatar, specialization components
 │   ├── layout/          # Header, navigation
 │   └── maps/            # Geographic map components
 ├── empire/[id]/         # Individual empire pages
 ├── epoch/[id]/          # Epoch overview pages
-├── episode/[id]/        # Episode player page
+├── episode/[id]/        # Episode player page (reads contentLibrary/{id})
 └── ...
 
 hooks/
 ├── useAuth.ts           # Firebase authentication
-├── useEventLogger.ts    # Fire-and-forget engagement event dispatch (NEW)
+├── useEventLogger.ts    # Fire-and-forget engagement event dispatch
 └── useExplorerProgress.ts  # User progress tracking
 
 lib/
-├── badges.ts            # Badge definitions and utilities
-├── interest-profile.ts  # Profile counters + Claude analysis (NEW)
-├── recommendations.ts   # Recommendation prompt builders + catalog (NEW)
-├── seed-data/           # Static content (figures, moments, perspectives)
-├── voice-mapping.ts     # TTS voice selection by content type
-└── xp.ts               # XP/leveling calculations
+├── badges.ts              # Badge definitions and utilities
+├── content-generation.ts  # Shared prompt-building logic (used only by the batch script)
+├── content-library.ts     # Deterministic contentLibrary item id scheme
+├── interest-profile.ts    # Free counter-based interest profile (no AI calls)
+├── recommendations.ts     # Deterministic scoring + host-pitch templates (no AI calls)
+├── seed-data/              # Static content (figures, moments, perspectives)
+├── voice-mapping.ts       # TTS voice selection by content type
+└── xp.ts                  # XP/leveling calculations
+
+scripts/
+└── generate-content-library.ts  # One-time batch job: pre-generates all 189 episodes
 
 public/
 ├── avatars/             # 6 explorer avatar images (PNG)
@@ -92,20 +105,25 @@ When generating images for this project:
 - Use "8-bit pixel art style" and "Age of Empires 2 aesthetic" for badges/icons
 - Use "vintage illustration" style for avatars
 
+## Content Library
+
+`contentLibrary/{itemId}` is a public-read, write-only-by-batch-script Firestore collection holding one pre-generated episode per content item — `itemId` is a deterministic slug from `lib/content-library.ts` (`overview-{empireId}`, `figure-{figureId}`, `moment-{momentId}`, `perspective-{perspectiveId}`). Audio lives at Storage path `content-library/{itemId}.mp3` (public read). To regenerate/extend it, edit the prompt logic in `lib/content-generation.ts` and re-run `npm run generate-library` — it's idempotent and skips items that already exist.
+
 ## Data Model
 
 ### Firestore Structure
 ```
+contentLibrary/{itemId}                 # Pre-generated episodes, public read, written only by the batch script
+listeningHistory/{userId}_{itemId}      # Per-user play history (deterministic doc id), powers the "My Journey" page
+
 users/{userId}/
-├── explorer/
-│   └── profile/
-│       ├── empires/{empireId}    # EmpireProgress
-│       ├── epochs/{epochId}      # EpochProgress
-│       ├── badges/{badgeId}      # EarnedBadge
-│       ├── events/{auto-id}      # EngagementEvent (NEW - adaptive content engine)
-│       ├── interests             # UserInterestProfile (NEW - single doc)
-│       └── rate-limits/recommend # Rate limit tracking (NEW)
-└── episodes/{episodeId}          # Generated episodes (global collection)
+└── explorer/
+    └── profile/
+        ├── empires/{empireId}    # EmpireProgress
+        ├── epochs/{epochId}      # EpochProgress
+        ├── badges/{badgeId}      # EarnedBadge
+        ├── events/{auto-id}      # EngagementEvent (adaptive content engine)
+        └── interests             # UserInterestProfile (single doc; free counters, no AI calls)
 ```
 
 ### Key Types
@@ -155,8 +173,10 @@ One icon per empire across 4 epochs, each with civilization-specific imagery.
 
 ## Content Generation
 
+All content is pre-generated once via `npm run generate-library` (see "Content Library" above) — there is no live generation path in the deployed app.
+
 ### Host Persona (System Prompt)
-The Time Capsule FM host voice is defined in `app/api/generate/route.ts` via `SYSTEM_PROMPT`:
+The Time Capsule FM host voice is defined in `lib/content-generation.ts` via `SYSTEM_PROMPT`:
 - Intellectually rigorous but casually irreverent
 - Opening pattern: dramatic weight + sarcastic deflation
 - Absurdist observations about weird/human/petty historical details
@@ -170,13 +190,15 @@ Voice selection is in `lib/voice-mapping.ts`. Model: `eleven_multilingual_v2`.
 
 | Voice | ID | Used For |
 |-------|----|----------|
-| Julian (British) | `9IzcwKmvwJcw58h3KnlH` | Host — overviews, figures, moments |
-| George (British, warm) | `JBFqnCBsd6RMkjVDRZzb` | Male perspective characters |
-| Lily (British, warm) | `pFZP5JQG7iQjIQuC4Bku` | Female perspective characters |
+| Adam | `pNInz6obpgDQGcFmaJgB` | Host — overviews, figures, moments |
+| Antoni | `ErXwobaYiN019PkySvjV` | Male perspective characters |
+| Bella | `EXAVITQu4vr4xnSDxMaL` | Female perspective characters |
+
+Voices are premade ElevenLabs voices available on the free API plan — the previous British trio (Julian/George/Lily) were library voices that return `402 payment_required` without a paid ElevenLabs plan.
 
 Female perspectives (5): `temple-priestess`, `mycenaean-queen`, `carthaginian-priestess`, `roman-matron`, `daughters-liberty`. All other 58 perspectives use male voice.
 
-Frontend pages pass `contentType` and `contentId` to `/api/tts` so the correct voice is selected.
+`scripts/generate-content-library.ts` passes `contentType` and `contentId` to `getVoiceId()` so the correct voice is selected for each pre-generated item.
 
 ## Leaflet Map Architecture
 

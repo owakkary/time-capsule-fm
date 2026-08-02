@@ -1,22 +1,22 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
-import { EPOCHS, DURATIONS, getEmpire } from '@/types';
+import { EPOCHS, getEmpire } from '@/types';
 import { getMomentById } from '@/lib/seed-data/moments';
+import { getContentLibraryItemId } from '@/lib/content-library';
 
 export default function MomentPage({ params }: { params: { id: string } }) {
   const momentId = params.id;
-  const { user, loading, signOut, getIdToken } = useAuth();
+  const { user, loading, signOut } = useAuth();
   const router = useRouter();
-  const [generating, setGenerating] = useState(false);
-  const [selectedDuration, setSelectedDuration] = useState(10);
 
   const moment = getMomentById(momentId);
   const empire = moment ? getEmpire(moment.empire) : null;
   const epoch = empire ? EPOCHS.find(e => e.id === empire.epochId) : null;
+  const episodeId = moment ? getContentLibraryItemId('moment', moment.empire, momentId) : null;
 
   useEffect(() => {
     if (!loading && !user) {
@@ -27,64 +27,6 @@ export default function MomentPage({ params }: { params: { id: string } }) {
   const handleSignOut = async () => {
     await signOut();
     router.push('/login');
-  };
-
-  const handleGenerate = async () => {
-    if (!moment || generating) return;
-
-    setGenerating(true);
-    try {
-      const token = await getIdToken();
-      const response = await fetch('/api/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          empire: moment.empire,
-          contentType: 'moment',
-          contentId: momentId,
-          durationMinutes: selectedDuration,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate');
-      }
-
-      const data = await response.json();
-
-      // Generate audio (non-fatal)
-      try {
-        const ttsResponse = await fetch('/api/tts', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            episodeId: data.id,
-            text: data.content,
-            contentType: 'moment',
-            contentId: momentId,
-          }),
-        });
-        if (!ttsResponse.ok) {
-          const ttsErrorData = await ttsResponse.json().catch(() => ({}));
-          console.error('TTS failed:', ttsResponse.status, ttsErrorData);
-        }
-      } catch (ttsError) {
-        console.error('TTS error (non-fatal):', ttsError);
-      }
-
-      router.push(`/episode/${data.id}`);
-    } catch (error) {
-      console.error('Generation error:', error);
-      alert('Failed to generate episode. Please try again.');
-    } finally {
-      setGenerating(false);
-    }
   };
 
   if (loading) {
@@ -132,7 +74,7 @@ export default function MomentPage({ params }: { params: { id: string } }) {
               <Link href="/dashboard" className="nav-link">Explore</Link>
               <Link href="/figures" className="nav-link">Figures</Link>
               <Link href="/moments" className="nav-link active">Moments</Link>
-              <Link href="/episodes" className="nav-link">My Episodes</Link>
+              <Link href="/episodes" className="nav-link">My Journey</Link>
               <div className="flex items-center gap-3 pl-4 border-l border-brass/20">
                 <Link href="/accolades" className="text-sm text-sepia-light hover:text-sepia transition-colors font-display">Profile</Link>
                 <button onClick={handleSignOut} className="text-sm text-sepia-light hover:text-sepia transition-colors font-display">Sign Out</button>
@@ -198,51 +140,23 @@ export default function MomentPage({ params }: { params: { id: string } }) {
               </div>
             </div>
 
-            {/* Generate Section */}
+            {/* Listen Section */}
             <div className="border-t border-brass/20 pt-8">
-              <h3 className="font-display text-lg font-bold text-ink mb-4">Generate Episode</h3>
+              <h3 className="font-display text-lg font-bold text-ink mb-4">This Chapter</h3>
               <p className="text-sepia-light font-body mb-4">
                 Experience the drama and significance of &quot;{moment.name}&quot; in a conversational podcast episode.
               </p>
 
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                <div className="flex gap-2">
-                  {DURATIONS.map((d) => (
-                    <button
-                      key={d.minutes}
-                      onClick={() => setSelectedDuration(d.minutes)}
-                      className={`px-4 py-2 rounded-sm text-sm font-display font-medium transition-all ${
-                        selectedDuration === d.minutes
-                          ? 'bg-brass text-parchment'
-                          : 'bg-parchment-dark text-sepia hover:bg-brass/20'
-                      }`}
-                    >
-                      {d.label}
-                    </button>
-                  ))}
-                </div>
-
-                <button
-                  onClick={handleGenerate}
-                  disabled={generating}
-                  className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {generating ? (
-                    <>
-                      <div className="loading-vintage w-5 h-5" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      Generate Episode
-                    </>
-                  )}
-                </button>
-              </div>
+              <Link
+                href={`/episode/${episodeId}`}
+                className="btn-primary inline-flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Start Listening
+              </Link>
             </div>
           </div>
         </div>

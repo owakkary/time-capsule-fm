@@ -78,7 +78,7 @@ export default function EpochPage({ params }: { params: { id: string } }) {
               <Link href="/dashboard" className="nav-link">Explore</Link>
               <Link href="/figures" className="nav-link">Figures</Link>
               <Link href="/moments" className="nav-link">Moments</Link>
-              <Link href="/episodes" className="nav-link">My Episodes</Link>
+              <Link href="/episodes" className="nav-link">My Journey</Link>
               <div className="flex items-center gap-3 pl-4 border-l border-brass/20">
                 <Link href="/accolades" className="text-sm text-sepia-light hover:text-sepia transition-colors font-display">Profile</Link>
                 <button onClick={handleSignOut} className="text-sm text-sepia-light hover:text-sepia transition-colors font-display">

@@ -1,146 +1,132 @@
-import { UserInterestProfile, EMPIRES, EPOCHS } from '@/types';
+import { EMPIRES, EmpireId, EpochId, ContentType, UserInterestProfile, getEmpire } from '@/types';
 import { KEY_FIGURES } from '@/lib/seed-data/figures';
 import { KEY_MOMENTS } from '@/lib/seed-data/moments';
 import { PERSPECTIVES } from '@/lib/seed-data/perspectives';
-import { EMPIRE_OVERVIEWS } from '@/lib/seed-data/overviews';
+import { getContentLibraryItemId } from '@/lib/content-library';
+
+export interface CatalogItem {
+  id: string;
+  empire: EmpireId;
+  epoch: EpochId;
+  contentType: ContentType;
+  contentId?: string;
+}
 
 /**
- * Build a compact content catalog string for Claude, grouped by epoch/empire.
- * Includes IDs, names, and content types so Claude can reference them in recommendations.
+ * The full catalog of content library items, derived from the same static
+ * seed data the batch generation script uses. No Claude call involved —
+ * this is pure lookup/scoring logic.
  */
-export function buildContentCatalog(): string {
-  const lines: string[] = [];
+export function getContentCatalog(): CatalogItem[] {
+  const items: CatalogItem[] = [];
 
-  for (const epoch of EPOCHS) {
-    lines.push(`\n## ${epoch.name} (${epoch.years})`);
-
-    for (const empireId of epoch.empires) {
-      const empire = EMPIRES.find(e => e.id === empireId);
-      if (!empire) continue;
-
-      lines.push(`\n### ${empire.name} [${empire.id}] — ${empire.years}`);
-
-      const overview = EMPIRE_OVERVIEWS.find(o => o.empire === empireId);
-      if (overview) {
-        lines.push(`  overview: ${overview.id} "${overview.title}"`);
-      }
-
-      const figures = KEY_FIGURES.filter(f => f.empire === empireId);
-      for (const fig of figures) {
-        lines.push(`  figure: ${fig.id} "${fig.name}" — ${fig.title}`);
-      }
-
-      const moments = KEY_MOMENTS.filter(m => m.empire === empireId);
-      for (const mom of moments) {
-        lines.push(`  moment: ${mom.id} "${mom.name}" — ${mom.year}`);
-      }
-
-      const perspectives = PERSPECTIVES.filter(p => p.empire === empireId);
-      for (const per of perspectives) {
-        lines.push(`  perspective: ${per.id} "${per.name}" — ${per.archetype}`);
-      }
-    }
+  for (const empire of EMPIRES) {
+    items.push({
+      id: getContentLibraryItemId('overview', empire.id),
+      empire: empire.id,
+      epoch: empire.epochId,
+      contentType: 'overview',
+    });
+  }
+  for (const figure of KEY_FIGURES) {
+    items.push({
+      id: getContentLibraryItemId('figure', figure.empire, figure.id),
+      empire: figure.empire,
+      epoch: getEmpire(figure.empire)!.epochId,
+      contentType: 'figure',
+      contentId: figure.id,
+    });
+  }
+  for (const moment of KEY_MOMENTS) {
+    items.push({
+      id: getContentLibraryItemId('moment', moment.empire, moment.id),
+      empire: moment.empire,
+      epoch: getEmpire(moment.empire)!.epochId,
+      contentType: 'moment',
+      contentId: moment.id,
+    });
+  }
+  for (const perspective of PERSPECTIVES) {
+    items.push({
+      id: getContentLibraryItemId('perspective', perspective.empire, perspective.id),
+      empire: perspective.empire,
+      epoch: getEmpire(perspective.empire)!.epochId,
+      contentType: 'perspective',
+      contentId: perspective.id,
+    });
   }
 
-  return lines.join('\n');
+  return items;
 }
 
 /**
- * System prompt for the recommendation engine.
+ * Deterministic scoring: balance familiar territory (empires/epochs the
+ * user already listens to) with discovery (empires they haven't tried),
+ * and cap how many of one content type appear together for variety.
+ * Replaces what used to be an Anthropic call per dashboard load.
  */
-export function buildSystemPrompt(): string {
-  return `You are the personalized recommendation engine for Time Capsule FM, a history exploration app that generates AI podcast episodes.
-
-Your role:
-- Suggest 3-5 episodes the user would enjoy, based on their listening history and interests
-- Prioritize diversity: mix empires, epochs, and content types (overview, figure, moment, perspective)
-- Balance familiar territory (empires they love) with discovery (new empires/epochs they haven't tried)
-- Each recommendation needs a compelling "host pitch" — a 1-2 sentence hook in the voice of Time Capsule FM's irreverent, witty host
-- Also write a short "welcomeBack" greeting (1-2 sentences) in the host's voice, referencing what the user has been exploring lately
-
-Output format: Return ONLY valid JSON matching this structure:
-{
-  "recommendations": [
-    {
-      "id": "unique-rec-id",
-      "empire": "empire-id",
-      "epoch": "epoch-id",
-      "contentType": "overview|figure|moment|perspective",
-      "contentId": "content-item-id or omit for overviews",
-      "title": "Episode title",
-      "hostPitch": "1-2 sentence hook in the host's witty voice",
-      "reason": "Brief internal reason for this recommendation",
-      "confidence": 0.8
-    }
-  ],
-  "welcomeBack": "Host-voice greeting referencing their recent activity"
-}
-
-Rules:
-- Never recommend episodes the user has already completed (check completedEpisodeIds)
-- confidence is 0.0-1.0 reflecting how well this matches the user's profile
-- contentId must be a valid ID from the catalog for figure/moment/perspective types
-- For overview type, omit contentId
-- The id field should be a descriptive kebab-case string like "rec-roman-empire-augustus"`;
-}
-
-/**
- * Build the user prompt with profile data and content catalog.
- */
-export function buildUserPrompt(
+export function scoreRecommendations(
   profile: UserInterestProfile,
-  catalog: string
-): string {
-  const topEmpires = Object.entries(profile.empireCounts)
-    .sort(([, a], [, b]) => (b as number) - (a as number))
-    .slice(0, 5)
-    .map(([id, count]) => {
-      const empire = EMPIRES.find(e => e.id === id);
-      return `${empire?.name || id}: ${count} episodes`;
-    })
-    .join(', ');
+  catalog: CatalogItem[],
+  count: number
+): CatalogItem[] {
+  const completed = new Set(profile.completedEpisodeIds);
+  const candidates = catalog.filter((item) => !completed.has(item.id));
 
-  const topEpochs = Object.entries(profile.epochCounts)
-    .sort(([, a], [, b]) => (b as number) - (a as number))
-    .slice(0, 3)
-    .map(([id, count]) => {
-      const epoch = EPOCHS.find(e => e.id === id);
-      return `${epoch?.name || id}: ${count}`;
-    })
-    .join(', ');
+  const scored = candidates.map((item) => {
+    const empireFamiliarity = profile.empireCounts[item.empire] || 0;
+    const epochFamiliarity = profile.epochCounts[item.epoch] || 0;
+    const isNewEmpire = empireFamiliarity === 0;
+    const score =
+      empireFamiliarity * 2 +
+      epochFamiliarity +
+      (isNewEmpire ? 3 : 0) +
+      Math.random(); // jitter so ties don't resolve identically every time
+    return { item, score };
+  });
 
-  const contentPrefs = Object.entries(profile.contentTypeCounts)
-    .sort(([, a], [, b]) => (b as number) - (a as number))
-    .map(([type, count]) => `${type}: ${count}`)
-    .join(', ');
+  scored.sort((a, b) => b.score - a.score);
 
-  // Find unexplored empires
-  const exploredEmpireIds = new Set(Object.keys(profile.empireCounts));
-  const unexplored = EMPIRES
-    .filter(e => !exploredEmpireIds.has(e.id))
-    .map(e => e.name)
-    .slice(0, 6);
+  // Greedily pick while capping same-content-type repeats for variety
+  const picked: CatalogItem[] = [];
+  const typeCounts: Partial<Record<ContentType, number>> = {};
+  for (const { item } of scored) {
+    const typeCount = typeCounts[item.contentType] || 0;
+    if (typeCount >= 2) continue;
+    picked.push(item);
+    typeCounts[item.contentType] = typeCount + 1;
+    if (picked.length >= count) break;
+  }
 
-  return `Here is the user's listening profile:
+  return picked;
+}
 
-**Stats**: ${profile.totalEpisodesStarted} episodes started, ${profile.totalEpisodesCompleted} completed
-**Top empires**: ${topEmpires || 'none yet'}
-**Top epochs**: ${topEpochs || 'none yet'}
-**Content type preferences**: ${contentPrefs || 'none yet'}
-**Unexplored empires**: ${unexplored.join(', ') || 'all explored'}
-${profile.inferredInterests.length > 0 ? `**Inferred interests**: ${profile.inferredInterests.join(', ')}` : ''}
-${profile.knowledgeGaps.length > 0 ? `**Knowledge gaps**: ${profile.knowledgeGaps.join(', ')}` : ''}
-${profile.personalityNotes ? `**Personality**: ${profile.personalityNotes}` : ''}
-${profile.explorationStyle ? `**Style**: ${profile.explorationStyle}` : ''}
+const HOST_PITCH_TEMPLATES: Record<ContentType, (title: string, empireName: string) => string> = {
+  overview: (_title, empireName) =>
+    `A sweeping tour through ${empireName} — the rise, the peak, and the fascinating weirdness in between.`,
+  figure: (title, empireName) => `Meet the person behind the legend: ${title}, from ${empireName}.`,
+  moment: (title, empireName) => `Step into "${title}" — one of ${empireName}'s defining chapters.`,
+  perspective: (title, _empireName) => `Live a day in someone else's shoes: "${title}," told in the first person.`,
+};
 
-**Completed episode IDs** (do NOT recommend these): ${profile.completedEpisodeIds.length > 0 ? profile.completedEpisodeIds.join(', ') : 'none'}
+export function getHostPitch(contentType: ContentType, title: string, empireName: string): string {
+  return HOST_PITCH_TEMPLATES[contentType](title, empireName);
+}
 
----
+export function getReason(item: CatalogItem, profile: UserInterestProfile, empireName: string): string {
+  const empireFamiliarity = profile.empireCounts[item.empire] || 0;
+  if (empireFamiliarity === 0) {
+    return 'A new civilization to discover.';
+  }
+  return `Because you've been exploring ${empireName}.`;
+}
 
-**Available Content Catalog:**
-${catalog}
+export function getWelcomeBack(profile: UserInterestProfile): string {
+  const topEmpireId = Object.entries(profile.empireCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
+  const topEmpire = topEmpireId ? getEmpire(topEmpireId as EmpireId) : null;
 
----
-
-Based on this profile, recommend 3-5 episodes. Return ONLY valid JSON.`;
+  if (topEmpire) {
+    return `Welcome back — ready to continue your journey through ${topEmpire.name}, or explore somewhere new?`;
+  }
+  return 'Welcome back — your journey through history continues.';
 }

@@ -1,6 +1,6 @@
 # Time Capsule FM
 
-> AI-powered historical podcast generator featuring Claude AI and ElevenLabs TTS
+> A guided audio journey through history — pre-generated chapters, zero live-generation cost
 
 ---
 
@@ -12,8 +12,7 @@
 | **Language** | TypeScript 5.3 |
 | **Styling** | Tailwind CSS 3.4 |
 | **Auth & DB** | Firebase (Auth, Firestore, Storage) |
-| **AI** | Anthropic Claude API (Sonnet 4) |
-| **TTS** | ElevenLabs API |
+| **Content library** | Pre-generated once via `npm run generate-library` (Anthropic Claude Sonnet 4 + ElevenLabs) — not called at request time |
 | **Fonts** | Crimson Pro (display), Source Serif 4 (body) |
 
 ### Design Tokens
@@ -93,25 +92,33 @@ animate-fade-in-up            /* Entry animations */
 
 ## Architecture Overview
 
-### Data Flow: Episode Generation
+### Data Flow: Batch Content Generation (one-time, offline)
 
 ```
-User selects empire & duration
+npm run generate-library
         ↓
-EpisodeGenerator.handleGenerate()
+scripts/generate-content-library.ts iterates all 189 seed-data items
         ↓
-useAuth().getIdToken()
+lib/content-generation.ts builds each prompt
         ↓
-POST /api/generate
-├── Claude generates content
-└── Save to Firestore
+Claude generates script + title  →  ElevenLabs → MP3
         ↓
-POST /api/tts
-├── ElevenLabs → MP3
-├── Upload to Storage
-└── Update episode.audioUrl
+Upload MP3 to Storage (content-library/{itemId}.mp3)
         ↓
-Navigate to /episode/[id]
+Write contentLibrary/{itemId} doc (public read)
+```
+
+### Data Flow: Playback (every real request, zero cost)
+
+```
+User clicks "Start Listening" on an empire/figure/moment/perspective page
+        ↓
+Link navigates straight to /episode/{itemId}  (itemId is deterministic, no fetch needed)
+        ↓
+Client reads contentLibrary/{itemId} directly (public Firestore read)
+        ↓
+<audio> plays audioUrl; on start/complete, useExplorerProgress awards XP
+  and a listeningHistory/{userId}_{itemId} doc is upserted
 ```
 
 ### Domain Model
@@ -124,8 +131,10 @@ Epoch (ancient-world, revolutionary-period)
         ├── Perspective[]
         └── Overview
 
+ContentLibraryItem (shared, public — one per content item, pre-generated)
+
 User
-  ├── Episode[] (generated content)
+  ├── ListeningHistory[] (which contentLibrary items they've played)
   └── Favorites { figures[], moments[] }
 ```
 
@@ -307,7 +316,8 @@ FIREBASE_PROJECT_ID=
 FIREBASE_CLIENT_EMAIL=
 FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
 
-# AI Services
+# Content library batch script only (npm run generate-library) —
+# not required for the deployed app itself, only for regenerating content
 ANTHROPIC_API_KEY=
 ELEVENLABS_API_KEY=
 ELEVENLABS_VOICE_ID=

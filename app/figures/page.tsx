@@ -59,7 +59,7 @@ export default function FiguresPage() {
         <div className="mb-10 opacity-0 animate-fade-in-up">
           <h2 className="hero-title mb-3">Historical Figures</h2>
           <p className="hero-subtitle text-left max-w-none">
-            Explore the lives of history's most influential people and generate personalized podcast episodes about them.
+            Explore the lives of history's most influential people.
           </p>
         </div>
 

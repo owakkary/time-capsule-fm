@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
 import { verifyAuthToken, getAdminDb } from '@/lib/firebase-admin';
-import { analyzeInterestProfile } from '@/lib/interest-profile';
+import { getInterestProfile } from '@/lib/interest-profile';
 import {
-  buildContentCatalog,
-  buildSystemPrompt,
-  buildUserPrompt,
+  getContentCatalog,
+  scoreRecommendations,
+  getHostPitch,
+  getReason,
+  getWelcomeBack,
 } from '@/lib/recommendations';
-import { Recommendation, RecommendationResponse } from '@/types';
-
-export const maxDuration = 30;
+import { getEmpire, Recommendation, RecommendationResponse } from '@/types';
 
 // Simple in-memory rate limiting + caching
 const cache = new Map<
@@ -18,6 +17,9 @@ const cache = new Map<
 >();
 
 const CACHE_TTL_MS = 60 * 1000; // 60 seconds
+const RECOMMENDATION_COUNT = 4;
+// Ask for a few extra candidates in case some aren't in the content library yet
+const CANDIDATE_POOL_SIZE = RECOMMENDATION_COUNT + 3;
 
 export async function GET(request: NextRequest) {
   // Auth
@@ -37,8 +39,7 @@ export async function GET(request: NextRequest) {
 
   const db = getAdminDb();
 
-  // Get analyzed interest profile
-  const profile = await analyzeInterestProfile(db, userId);
+  const profile = await getInterestProfile(db, userId);
 
   if (!profile || profile.totalEpisodesStarted < 3) {
     const newUserResponse: RecommendationResponse = {
@@ -53,60 +54,43 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(newUserResponse);
   }
 
-  // Build prompts
-  const catalog = buildContentCatalog();
-  const systemPrompt = buildSystemPrompt();
-  const userPrompt = buildUserPrompt(profile, catalog);
+  const catalog = getContentCatalog();
+  const candidates = scoreRecommendations(profile, catalog, CANDIDATE_POOL_SIZE);
 
-  try {
-    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
+  // Only recommend items that actually exist in the content library yet
+  const recommendations: Recommendation[] = [];
+  for (const candidate of candidates) {
+    if (recommendations.length >= RECOMMENDATION_COUNT) break;
 
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1500,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }],
+    const itemSnap = await db.collection('contentLibrary').doc(candidate.id).get();
+    if (!itemSnap.exists) continue;
+
+    const item = itemSnap.data()!;
+    const empireName = getEmpire(candidate.empire)?.name || candidate.empire;
+
+    recommendations.push({
+      id: candidate.id,
+      empire: candidate.empire,
+      epoch: candidate.epoch,
+      contentType: candidate.contentType,
+      contentId: candidate.contentId,
+      title: item.title,
+      hostPitch: getHostPitch(candidate.contentType, item.title, empireName),
+      reason: getReason(candidate, profile, empireName),
+      confidence: 0.7,
     });
-
-    const text =
-      response.content[0].type === 'text' ? response.content[0].text : '';
-
-    // Parse JSON - handle potential markdown code blocks
-    const jsonStr = text.replace(/```json?\n?/g, '').replace(/```\n?/g, '').trim();
-    const parsed = JSON.parse(jsonStr);
-
-    const recommendations: Recommendation[] = (
-      parsed.recommendations || []
-    ).map((rec: Recommendation) => ({
-      id: rec.id || `rec-${Date.now()}`,
-      empire: rec.empire,
-      epoch: rec.epoch,
-      contentType: rec.contentType,
-      contentId: rec.contentId,
-      title: rec.title,
-      hostPitch: rec.hostPitch,
-      reason: rec.reason,
-      confidence: rec.confidence ?? 0.7,
-    }));
-
-    const result: RecommendationResponse = {
-      recommendations,
-      welcomeBack: parsed.welcomeBack || '',
-      isNewUser: false,
-    };
-
-    // Cache the result
-    cache.set(userId, {
-      lastRequest: Date.now(),
-      cachedResponse: result,
-    });
-
-    return NextResponse.json(result);
-  } catch (error) {
-    console.error('Recommendation generation failed:', error);
-    return NextResponse.json(
-      { error: 'Failed to generate recommendations' },
-      { status: 500 }
-    );
   }
+
+  const result: RecommendationResponse = {
+    recommendations,
+    welcomeBack: getWelcomeBack(profile),
+    isNewUser: false,
+  };
+
+  cache.set(userId, {
+    lastRequest: Date.now(),
+    cachedResponse: result,
+  });
+
+  return NextResponse.json(result);
 }

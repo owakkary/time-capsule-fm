@@ -58,7 +58,7 @@ export default function PersonalizedHome() {
   const visibleRecs = data.recommendations.filter(r => !dismissed.has(r.id));
   if (visibleRecs.length === 0) return null;
 
-  const handleGenerate = (rec: Recommendation) => {
+  const handlePlay = (rec: Recommendation) => {
     logEvent({
       eventType: 'recommendation_clicked',
       empire: rec.empire,
@@ -67,8 +67,8 @@ export default function PersonalizedHome() {
       contentId: rec.contentId,
       recommendationId: rec.id,
     });
-    // Navigate to the empire page where the user can generate
-    window.location.href = `/empire/${rec.empire}`;
+    // rec.id is the content library item id — jump straight to playback
+    window.location.href = `/episode/${rec.id}`;
   };
 
   const handleSkip = (rec: Recommendation) => {
@@ -105,7 +105,7 @@ export default function PersonalizedHome() {
           >
             <RecommendationCard
               recommendation={rec}
-              onGenerate={handleGenerate}
+              onPlay={handlePlay}
               onSkip={handleSkip}
             />
           </div>

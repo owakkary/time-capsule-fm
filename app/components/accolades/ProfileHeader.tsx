@@ -155,7 +155,7 @@ function getFlavorText(profile: ExplorerProfile): string {
 
   // Novice with encouragement
   if (totalEpisodesGenerated === 0) {
-    return 'Your journey through time awaits. Generate your first episode!';
+    return 'Your journey through time awaits. Start your first chapter!';
   }
   if (currentDailyStreak > 0) {
     return `You've begun your historical journey. Keep exploring!`;

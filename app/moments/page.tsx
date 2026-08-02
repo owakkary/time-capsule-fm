@@ -59,7 +59,7 @@ export default function MomentsPage() {
         <div className="mb-10 opacity-0 animate-fade-in-up">
           <h2 className="hero-title mb-3">Historical Moments</h2>
           <p className="hero-subtitle text-left max-w-none">
-            Discover pivotal events that shaped civilizations and generate immersive podcast episodes about them.
+            Discover pivotal events that shaped civilizations.
           </p>
         </div>
 

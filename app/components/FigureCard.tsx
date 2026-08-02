@@ -91,14 +91,14 @@ export default function FigureCard({
           ))}
         </div>
 
-        {/* Generate hint */}
+        {/* Listen hint */}
         <div className="mt-4 pt-3 border-t border-brass/20">
           <span className="text-sm text-brass font-display font-medium flex items-center gap-1">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            Generate episode
+            Start Listening
           </span>
         </div>
       </div>

@@ -228,7 +228,7 @@ export default function AccoladesPage() {
                       color="text-amber-700"
                     />
                     <StatRow
-                      label="Episodes Generated"
+                      label="Chapters Explored"
                       value={profile.totalEpisodesGenerated}
                       icon={<MicIcon />}
                       color="text-rose-800"
@@ -268,14 +268,14 @@ export default function AccoladesPage() {
                       href="/dashboard"
                       className="block px-4 py-3 rounded-sm bg-parchment-dark hover:bg-brass/10 transition-colors"
                     >
-                      <span className="font-display text-sepia">Generate New Episode</span>
+                      <span className="font-display text-sepia">Continue Your Journey</span>
                       <span className="text-xs text-sepia-light ml-2">+25 XP</span>
                     </Link>
                     <Link
                       href="/episodes"
                       className="block px-4 py-3 rounded-sm bg-parchment-dark hover:bg-brass/10 transition-colors"
                     >
-                      <span className="font-display text-sepia">Listen to Episodes</span>
+                      <span className="font-display text-sepia">Revisit Past Chapters</span>
                       <span className="text-xs text-sepia-light ml-2">+50 XP per complete</span>
                     </Link>
                     <Link
