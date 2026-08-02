@@ -12,11 +12,12 @@ Server-side API endpoints using Next.js Route Handlers. All routes use Firebase 
 
 ## Contents
 
+There is deliberately no live content-generation route — all episodes are pre-generated once by `scripts/generate-content-library.ts` (see root `CLAUDE.md`) and read directly from the public `contentLibrary` Firestore collection, mostly via the client SDK rather than an API route.
+
 | Route | Methods | Description |
 |-------|---------|-------------|
-| `/api/generate` | POST | Generate episode content via Claude |
-| `/api/tts` | POST | Convert text to speech via ElevenLabs |
-| `/api/episodes` | GET, DELETE | List/delete user's episodes |
+| `/api/recommend` | GET | Deterministic, free "what to listen to next" scoring (no AI calls) |
+| `/api/events` | POST | Record engagement events, updates free interest-profile counters |
 | `/api/empires` | GET | List all empires |
 | `/api/empires/[id]` | GET | Single empire with content |
 | `/api/epochs` | GET | List all epochs |
@@ -170,88 +171,36 @@ export async function GET(request: NextRequest) {
 
 ## API Reference
 
-### POST /api/generate
+### GET /api/recommend
 
-Generate episode content using Claude AI.
-
-**Request:**
-```json
-{
-  "empire": "egypt",
-  "contentType": "overview",
-  "contentId": "cleopatra",
-  "durationMinutes": 10
-}
-```
-
-**Content Types:**
-- `overview` — Empire introduction
-- `figure` — Historical person biography
-- `moment` — Historical event narrative
-- `perspective` — First-person account
+Returns 3-4 personalized "what to listen to next" suggestions using free, deterministic scoring over the user's engagement counters (`lib/recommendations.ts`) — no Anthropic call. Cached in-memory per user for 60s. Returns `{ recommendations: [], welcomeBack: '', isNewUser: true }` until the user has started at least 3 episodes.
 
 **Response:**
 ```json
 {
-  "episodeId": "abc123",
-  "title": "The Last Pharaoh",
-  "content": "...",
-  "epoch": "ancient-world",
-  "empire": "egypt"
-}
-```
-
-### POST /api/tts
-
-Convert episode text to audio.
-
-**Request:**
-```json
-{
-  "episodeId": "abc123",
-  "text": "Episode content..."
-}
-```
-
-**Response:**
-```json
-{
-  "audioUrl": "https://storage.googleapis.com/.../abc123.mp3"
-}
-```
-
-### GET /api/episodes
-
-List user's episodes.
-
-**Query params:** `?limit=20`
-
-**Response:**
-```json
-{
-  "episodes": [
+  "recommendations": [
     {
-      "id": "abc123",
+      "id": "figure-cleopatra",
+      "empire": "ancient-egypt",
+      "epoch": "bronze-age",
+      "contentType": "figure",
+      "contentId": "cleopatra",
       "title": "The Last Pharaoh",
-      "empire": "egypt",
-      "durationMinutes": 10,
-      "audioUrl": "...",
-      "createdAt": "2025-01-25T..."
+      "hostPitch": "Meet the person behind the legend: The Last Pharaoh, from Ancient Egypt.",
+      "reason": "A new civilization to discover.",
+      "confidence": 0.7
     }
-  ]
+  ],
+  "welcomeBack": "Welcome back — ready to continue your journey through Ancient Egypt, or explore somewhere new?",
+  "isNewUser": false
 }
 ```
 
-### DELETE /api/episodes
+`recommendation.id` is the exact `contentLibrary` document id — the frontend links straight to `/episode/{id}`.
 
-Delete an episode.
+### POST /api/events
 
-**Request:**
-```json
-{
-  "episodeId": "abc123"
-}
-```
+Records an engagement event (`episode_started`, `episode_completed`, `episode_abandoned`, `episode_replayed`, `recommendation_clicked`, `recommendation_skipped`) and atomically updates the free interest-profile counters that power `/api/recommend`.
 
 ---
 
@@ -259,21 +208,16 @@ Delete an episode.
 
 1. **Auth Header Format**: Expects `Bearer {token}` format. The `verifyAuthToken` helper handles extraction.
 
-2. **Legacy `timePeriod` Field**: The generate endpoint accepts legacy `timePeriod` for backward compatibility. Maps to new `empire` internally.
+2. **No live generation path**: `contentLibrary` items are written only by `scripts/generate-content-library.ts` via the Admin SDK (Firestore rules block all client writes to that collection). Don't add a route that writes to it.
 
-3. **ElevenLabs Rate Limits**: TTS has rate limits. Consider adding queue or retry logic for production.
+3. **Storage URLs**: Audio URLs are public (`content-library/{itemId}.mp3`). Playback requires no auth — only the surrounding app pages are login-gated.
 
-4. **Storage URLs**: Audio URLs are public. Episode ownership verified at generation time, not on playback.
-
-5. **Firestore Timestamps**: Convert `Timestamp` to ISO string before returning:
+4. **Firestore Timestamps**: Convert `Timestamp` to ISO string / `Date` before returning:
    ```typescript
    createdAt: doc.data().createdAt?.toDate().toISOString()
    ```
 
-6. **Word Count Formula**:
-   - 5 min → ~600 words
-   - 10 min → ~1200 words
-   - 15 min → ~1800 words
+5. **Word Count**: every content library item is generated once at a fixed ~1200 words / ~10 minutes (`TARGET_WORD_COUNT` in `lib/content-generation.ts`) — there is no per-request duration choice.
 
 ---
 

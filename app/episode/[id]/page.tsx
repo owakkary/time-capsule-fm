@@ -3,30 +3,22 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/useAuth';
 import { useEventLogger } from '@/hooks/useEventLogger';
-import { getEmpire, EPOCHS, EmpireId, EpochId, ContentType } from '@/types';
-
-interface Episode {
-  id: string;
-  title: string;
-  content: string;
-  empire: string;
-  epoch: string;
-  contentType: string;
-  durationMinutes: number;
-  audioUrl: string | null;
-  audioDurationSeconds: number | null;
-  createdAt: { _seconds: number };
-}
+import { useExplorerProgress } from '@/hooks/useExplorerProgress';
+import { getEmpire, EPOCHS, ContentLibraryItem, EmpireId, EpochId, ContentType } from '@/types';
 
 export default function EpisodePage({ params }: { params: { id: string } }) {
   const episodeId = params.id;
-  const { user, loading, signOut, getIdToken } = useAuth();
+  const { user, loading, signOut } = useAuth();
   const { logEvent } = useEventLogger();
+  const { recordEpisodeGenerated, recordEpisodeCompleted } = useExplorerProgress(user?.uid || null);
   const router = useRouter();
-  const [episode, setEpisode] = useState<Episode | null>(null);
+  const [episode, setEpisode] = useState<ContentLibraryItem | null>(null);
   const [loadingEpisode, setLoadingEpisode] = useState(true);
+  const [notFound, setNotFound] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -46,13 +38,32 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
 
   const getEventFields = useCallback(() => ({
     episodeId,
-    empire: episode?.empire as EmpireId | undefined,
-    epoch: episode?.epoch as EpochId | undefined,
-    contentType: episode?.contentType as ContentType | undefined,
+    empire: episode?.empireId,
+    epoch: episode?.epochId,
+    contentType: episode?.contentType,
   }), [episodeId, episode]);
 
   const getEventFieldsRef = useRef(getEventFields);
   getEventFieldsRef.current = getEventFields;
+
+  const touchListeningHistory = useCallback(async (item: ContentLibraryItem, completed: boolean) => {
+    if (!db || !user) return;
+    const historyRef = doc(db, 'listeningHistory', `${user.uid}_${item.id}`);
+    await setDoc(historyRef, {
+      id: `${user.uid}_${item.id}`,
+      userId: user.uid,
+      episodeId: item.id,
+      title: item.title,
+      empireId: item.empireId,
+      epochId: item.epochId,
+      contentType: item.contentType,
+      durationMinutes: item.durationMinutes,
+      progressSeconds: Math.round(progressRef.current),
+      completed,
+      lastPlayedAt: Timestamp.now(),
+      createdAt: Timestamp.now(),
+    }, { merge: true });
+  }, [user]);
 
   // Track episode_abandoned on unmount / beforeunload (fires ONCE on leave)
   useEffect(() => {
@@ -82,22 +93,22 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     async function fetchEpisode() {
-      if (!user || !episodeId) return;
+      if (!user || !episodeId || !db) return;
 
       try {
-        const token = await getIdToken();
-        const response = await fetch(`/api/episodes?id=${episodeId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          setEpisode(data.episode || data);
+        const snap = await getDoc(doc(db, 'contentLibrary', episodeId));
+        if (snap.exists()) {
+          const data = snap.data();
+          setEpisode({
+            ...data,
+            createdAt: data.createdAt?.toDate?.() || new Date(),
+          } as ContentLibraryItem);
+        } else {
+          setNotFound(true);
         }
       } catch (error) {
         console.error('Failed to fetch episode:', error);
+        setNotFound(true);
       } finally {
         setLoadingEpisode(false);
       }
@@ -106,7 +117,7 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
     if (user) {
       fetchEpisode();
     }
-  }, [user, episodeId, getIdToken]);
+  }, [user, episodeId]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -114,17 +125,24 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
   };
 
   const togglePlay = () => {
-    if (!audioRef.current) return;
+    if (!audioRef.current || !episode) return;
 
     if (isPlaying) {
       audioRef.current.pause();
     } else {
       audioRef.current.play();
 
-      // Fire episode_started on first play
+      // Fire episode_started + award discovery XP on first play
       if (!hasStartedRef.current) {
         hasStartedRef.current = true;
         logEvent({ eventType: 'episode_started', ...getEventFields() });
+        recordEpisodeGenerated(
+          episode.empireId as EmpireId,
+          episode.epochId as EpochId,
+          episode.contentType as ContentType,
+          episode.contentId || undefined
+        );
+        touchListeningHistory(episode, false);
       }
 
       // Fire episode_replayed if playing again after completion
@@ -135,6 +153,18 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
     setIsPlaying(!isPlaying);
   };
 
+  const handleComplete = useCallback((completionPercentage: number) => {
+    if (hasCompletedRef.current || !episode) return;
+    hasCompletedRef.current = true;
+    logEvent({
+      eventType: 'episode_completed',
+      ...getEventFields(),
+      completionPercentage,
+    });
+    recordEpisodeCompleted(episode.empireId as EmpireId);
+    touchListeningHistory(episode, true);
+  }, [episode, recordEpisodeCompleted, touchListeningHistory, logEvent, getEventFields]);
+
   const handleTimeUpdate = () => {
     if (!audioRef.current) return;
     const currentTime = audioRef.current.currentTime;
@@ -144,12 +174,7 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
 
     // Fire episode_completed when >= 90% listened
     if (!hasCompletedRef.current && dur > 0 && currentTime / dur >= 0.9) {
-      hasCompletedRef.current = true;
-      logEvent({
-        eventType: 'episode_completed',
-        ...getEventFields(),
-        completionPercentage: Math.round((currentTime / dur) * 100),
-      });
+      handleComplete(Math.round((currentTime / dur) * 100));
     }
   };
 
@@ -184,21 +209,21 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
     return null;
   }
 
-  if (!episode) {
+  if (notFound || !episode) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h1 className="font-display text-2xl font-bold text-ink mb-4">Episode Not Found</h1>
           <Link href="/episodes" className="text-brass hover:text-brass-dark transition-colors font-display">
-            Return to My Episodes
+            Return to My Journey
           </Link>
         </div>
       </div>
     );
   }
 
-  const empire = getEmpire(episode.empire as any);
-  const epoch = EPOCHS.find(e => e.id === episode.epoch);
+  const empire = getEmpire(episode.empireId);
+  const epoch = EPOCHS.find(e => e.id === episode.epochId);
 
   return (
     <div className="min-h-screen">
@@ -220,7 +245,7 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
               <Link href="/dashboard" className="nav-link">Explore</Link>
               <Link href="/figures" className="nav-link">Figures</Link>
               <Link href="/moments" className="nav-link">Moments</Link>
-              <Link href="/episodes" className="nav-link active">My Episodes</Link>
+              <Link href="/episodes" className="nav-link active">My Journey</Link>
               <div className="flex items-center gap-3 pl-4 border-l border-brass/20">
                 <Link href="/accolades" className="text-sm text-sepia-light hover:text-sepia transition-colors font-display">Profile</Link>
                 <button onClick={handleSignOut} className="text-sm text-sepia-light hover:text-sepia transition-colors font-display">Sign Out</button>
@@ -233,7 +258,7 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
       {/* Breadcrumb */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <nav className="flex items-center gap-2 text-sm text-sepia-light font-body">
-          <Link href="/episodes" className="hover:text-sepia transition-colors">My Episodes</Link>
+          <Link href="/episodes" className="hover:text-sepia transition-colors">My Journey</Link>
           <span>/</span>
           <span className="text-ink font-medium truncate">{episode.title}</span>
         </nav>
@@ -256,68 +281,59 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
           </div>
 
           {/* Audio Player */}
-          {episode.audioUrl && (
-            <div className="p-6 border-b border-brass/20">
-              <audio
-                ref={audioRef}
-                src={episode.audioUrl}
-                onTimeUpdate={handleTimeUpdate}
-                onLoadedMetadata={handleLoadedMetadata}
-                onEnded={() => {
-                  setIsPlaying(false);
-                  if (!hasCompletedRef.current) {
-                    hasCompletedRef.current = true;
-                    logEvent({
-                      eventType: 'episode_completed',
-                      ...getEventFields(),
-                      completionPercentage: 100,
-                    });
-                  }
-                }}
-              />
+          <div className="p-6 border-b border-brass/20">
+            <audio
+              ref={audioRef}
+              src={episode.audioUrl}
+              onTimeUpdate={handleTimeUpdate}
+              onLoadedMetadata={handleLoadedMetadata}
+              onEnded={() => {
+                setIsPlaying(false);
+                handleComplete(100);
+              }}
+            />
 
-              <div className="flex items-center gap-4">
-                <button
-                  onClick={togglePlay}
-                  className="w-14 h-14 rounded-full flex items-center justify-center text-parchment bg-brass shadow-lg hover:bg-brass-dark transition-colors"
-                >
-                  {isPlaying ? (
-                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
-                    </svg>
-                  ) : (
-                    <svg className="w-6 h-6 ml-1" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
-                  )}
-                </button>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={togglePlay}
+                className="w-14 h-14 rounded-full flex items-center justify-center text-parchment bg-brass shadow-lg hover:bg-brass-dark transition-colors"
+              >
+                {isPlaying ? (
+                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+                  </svg>
+                ) : (
+                  <svg className="w-6 h-6 ml-1" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                )}
+              </button>
 
-                <div className="flex-1">
-                  <input
-                    type="range"
-                    min="0"
-                    max={duration || 100}
-                    value={progress}
-                    onChange={handleSeek}
-                    className="w-full h-2 bg-parchment-dark rounded-sm appearance-none cursor-pointer"
-                    style={{
-                      background: `linear-gradient(to right, var(--color-brass) ${(progress / duration) * 100}%, var(--color-parchment-dark) ${(progress / duration) * 100}%)`,
-                    }}
-                  />
-                  <div className="flex justify-between text-sm text-sepia-light font-body mt-1">
-                    <span>{formatTime(progress)}</span>
-                    <span>{formatTime(duration)}</span>
-                  </div>
+              <div className="flex-1">
+                <input
+                  type="range"
+                  min="0"
+                  max={duration || 100}
+                  value={progress}
+                  onChange={handleSeek}
+                  className="w-full h-2 bg-parchment-dark rounded-sm appearance-none cursor-pointer"
+                  style={{
+                    background: `linear-gradient(to right, var(--color-brass) ${(progress / duration) * 100}%, var(--color-parchment-dark) ${(progress / duration) * 100}%)`,
+                  }}
+                />
+                <div className="flex justify-between text-sm text-sepia-light font-body mt-1">
+                  <span>{formatTime(progress)}</span>
+                  <span>{formatTime(duration)}</span>
                 </div>
               </div>
             </div>
-          )}
+          </div>
 
           {/* Transcript */}
           <div className="p-8">
             <h3 className="font-display text-lg font-bold text-ink mb-4">Transcript</h3>
             <div className="prose prose-lg max-w-none text-sepia font-body whitespace-pre-wrap">
-              {episode.content}
+              {episode.script}
             </div>
           </div>
         </div>
@@ -331,43 +347,44 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            Back to My Episodes
+            Back to My Journey
           </Link>
         </div>
       </div>
 
       {/* Sticky Audio Player (when audio exists and scrolled) */}
-      {episode.audioUrl && (
-        <div
-          className="fixed bottom-0 left-0 right-0 bg-parchment border-t border-brass/20 shadow-lg p-4"
-          style={{ display: progress > 0 || isPlaying ? 'block' : 'none' }}
-        >
-          <div className="max-w-4xl mx-auto flex items-center gap-4">
-            <button
-              onClick={togglePlay}
-              className="w-10 h-10 rounded-full flex items-center justify-center text-parchment bg-brass hover:bg-brass-dark transition-colors"
-            >
-              {isPlaying ? (
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
-                </svg>
-              ) : (
-                <svg className="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M8 5v14l11-7z" />
-                </svg>
-              )}
-            </button>
-            <div className="flex-1">
-              <p className="text-sm font-display font-medium text-ink truncate">{episode.title}</p>
-              <div className="flex items-center gap-2 text-xs text-sepia-light font-body">
-                <span>{formatTime(progress)}</span>
-                <span>/</span>
-                <span>{formatTime(duration)}</span>
-              </div>
+      <div
+        className="fixed bottom-0 left-0 right-0 bg-parchment border-t border-brass/20 shadow-lg p-4"
+        style={{
+          display: progress > 0 || isPlaying ? 'block' : 'none',
+          paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
+        }}
+      >
+        <div className="max-w-4xl mx-auto flex items-center gap-4">
+          <button
+            onClick={togglePlay}
+            className="w-10 h-10 rounded-full flex items-center justify-center text-parchment bg-brass hover:bg-brass-dark transition-colors"
+          >
+            {isPlaying ? (
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            )}
+          </button>
+          <div className="flex-1">
+            <p className="text-sm font-display font-medium text-ink truncate">{episode.title}</p>
+            <div className="flex items-center gap-2 text-xs text-sepia-light font-body">
+              <span>{formatTime(progress)}</span>
+              <span>/</span>
+              <span>{formatTime(duration)}</span>
             </div>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

@@ -1,24 +1,23 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
-import { EMPIRES, EmpireId, EPOCHS, DURATIONS } from '@/types';
+import { EMPIRES, EmpireId, EPOCHS } from '@/types';
 import { getFiguresByEmpire } from '@/lib/seed-data/figures';
 import { getMomentsByEmpire } from '@/lib/seed-data/moments';
 import { getPerspectivesByEmpire } from '@/lib/seed-data/perspectives';
 import { getOverviewByEmpire } from '@/lib/seed-data/overviews';
+import { getContentLibraryItemId } from '@/lib/content-library';
 import FigureCard from '@/app/components/FigureCard';
 import MomentCard from '@/app/components/MomentCard';
 import PerspectiveCard from '@/app/components/PerspectiveCard';
 
 export default function EmpirePage({ params }: { params: { id: string } }) {
   const empireId = params.id as EmpireId;
-  const { user, loading, signOut, getIdToken } = useAuth();
+  const { user, loading, signOut } = useAuth();
   const router = useRouter();
-  const [generating, setGenerating] = useState(false);
-  const [selectedDuration, setSelectedDuration] = useState(10);
 
   const empire = EMPIRES.find(e => e.id === empireId);
   const epoch = empire ? EPOCHS.find(e => e.id === empire.epochId) : null;
@@ -26,6 +25,7 @@ export default function EmpirePage({ params }: { params: { id: string } }) {
   const moments = getMomentsByEmpire(empireId);
   const perspectives = getPerspectivesByEmpire(empireId);
   const overview = getOverviewByEmpire(empireId);
+  const overviewEpisodeId = getContentLibraryItemId('overview', empireId);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -36,62 +36,6 @@ export default function EmpirePage({ params }: { params: { id: string } }) {
   const handleSignOut = async () => {
     await signOut();
     router.push('/login');
-  };
-
-  const handleGenerateOverview = async () => {
-    if (!empire || generating) return;
-
-    setGenerating(true);
-    try {
-      const token = await getIdToken();
-      const response = await fetch('/api/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          empire: empireId,
-          contentType: 'overview',
-          durationMinutes: selectedDuration,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate');
-      }
-
-      const data = await response.json();
-
-      // Generate audio (non-fatal)
-      try {
-        const ttsResponse = await fetch('/api/tts', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            episodeId: data.id,
-            text: data.content,
-            contentType: 'overview',
-          }),
-        });
-        if (!ttsResponse.ok) {
-          const ttsErrorData = await ttsResponse.json().catch(() => ({}));
-          console.error('TTS failed:', ttsResponse.status, ttsErrorData);
-        }
-      } catch (ttsError) {
-        console.error('TTS error (non-fatal):', ttsError);
-      }
-
-      router.push(`/episode/${data.id}`);
-    } catch (error) {
-      console.error('Generation error:', error);
-      alert('Failed to generate episode. Please try again.');
-    } finally {
-      setGenerating(false);
-    }
   };
 
   if (loading) {
@@ -139,7 +83,7 @@ export default function EmpirePage({ params }: { params: { id: string } }) {
               <Link href="/dashboard" className="nav-link">Explore</Link>
               <Link href="/figures" className="nav-link">Figures</Link>
               <Link href="/moments" className="nav-link">Moments</Link>
-              <Link href="/episodes" className="nav-link">My Episodes</Link>
+              <Link href="/episodes" className="nav-link">My Journey</Link>
               <div className="flex items-center gap-3 pl-4 border-l border-brass/20">
                 <Link href="/accolades" className="text-sm text-sepia-light hover:text-sepia transition-colors font-display">Profile</Link>
                 <button onClick={handleSignOut} className="text-sm text-sepia-light hover:text-sepia transition-colors font-display">Sign Out</button>
@@ -200,44 +144,16 @@ export default function EmpirePage({ params }: { params: { id: string } }) {
             )}
 
             <div className="border-t border-brass/20 pt-6">
-              <p className="text-sm text-sepia-light font-body mb-4">Generate an overview episode:</p>
-              <div className="flex items-center gap-4">
-                <div className="flex gap-2">
-                  {DURATIONS.map((d) => (
-                    <button
-                      key={d.minutes}
-                      onClick={() => setSelectedDuration(d.minutes)}
-                      className={`px-4 py-2 rounded-sm text-sm font-display font-medium transition-all ${
-                        selectedDuration === d.minutes
-                          ? 'bg-brass text-parchment'
-                          : 'bg-parchment-dark text-sepia hover:bg-brass/20'
-                      }`}
-                    >
-                      {d.label}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  onClick={handleGenerateOverview}
-                  disabled={generating}
-                  className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {generating ? (
-                    <>
-                      <div className="loading-vintage w-4 h-4" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      Generate Overview
-                    </>
-                  )}
-                </button>
-              </div>
+              <Link
+                href={`/episode/${overviewEpisodeId}`}
+                className="btn-primary inline-flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Start Listening
+              </Link>
             </div>
           </div>
         </section>

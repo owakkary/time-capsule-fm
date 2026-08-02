@@ -78,8 +78,7 @@ export default function DashboardPage() {
           </h2>
           {!selectedEpoch && (
             <p className="text-lg text-sepia-light text-balance mt-3 max-w-2xl mx-auto">
-              Pick an epoch, explore the map, and generate a casual, witty podcast episode
-              crafted just for you by AI.
+              Pick an epoch, explore the map, and step into a curated chapter of history.
             </p>
           )}
         </div>

@@ -8,27 +8,33 @@ export interface UserProfile {
   updatedAt: Date;
 }
 
-export interface Episode {
+// A pre-generated, shared episode in the static content library.
+// Stored at contentLibrary/{id} — id is deterministic, see lib/content-library.ts.
+export interface ContentLibraryItem {
   id: string;
-  userId: string;
-  epoch: EpochId;
-  empire: EmpireId;
   contentType: ContentType;
-  contentId?: string; // ID of the figure, moment, perspective, or null for overview
-  durationMinutes: number;
+  contentId: string | null; // ID of the figure, moment, perspective; null for overview
+  empireId: EmpireId;
+  epochId: EpochId;
   title: string;
-  content: string;
-  audioUrl: string | null;
+  script: string;
+  durationMinutes: number;
+  voiceId: string;
+  audioUrl: string;
   audioDurationSeconds: number | null;
+  wordCount: number;
   createdAt: Date;
-  // Legacy field for backward compatibility
-  timePeriod?: string;
 }
 
 export interface ListeningHistory {
   id: string;
   userId: string;
-  episodeId: string;
+  episodeId: string; // ContentLibraryItem id
+  title: string;
+  empireId: EmpireId;
+  epochId: EpochId;
+  contentType: ContentType;
+  durationMinutes: number;
   progressSeconds: number;
   completed: boolean;
   lastPlayedAt: Date;
@@ -506,16 +512,6 @@ export interface FavoriteItem {
 }
 
 // ============================================
-// DURATIONS - Episode length options
-// ============================================
-
-export const DURATIONS = [
-  { minutes: 5, label: '5 min', description: 'Quick hit' },
-  { minutes: 10, label: '10 min', description: 'Coffee break' },
-  { minutes: 15, label: '15 min', description: 'Deep dive' },
-] as const;
-
-// ============================================
 // ARCHIVED TIME PERIODS (for future epochs)
 // ============================================
 
@@ -530,37 +526,6 @@ export const TIME_PERIODS = [
 ] as const;
 
 export type TimePeriodId = EmpireId;
-
-// ============================================
-// API REQUEST/RESPONSE TYPES
-// ============================================
-
-export interface GenerateRequest {
-  epoch: EpochId;
-  empire: EmpireId;
-  contentType: ContentType;
-  contentId?: string;
-  durationMinutes: number;
-}
-
-export interface GenerateResponse {
-  id: string;
-  title: string;
-  content: string;
-  epoch: EpochId;
-  empire: EmpireId;
-  contentType: ContentType;
-  durationMinutes: number;
-}
-
-export interface TTSRequest {
-  episodeId: string;
-  text: string;
-}
-
-export interface TTSResponse {
-  audioUrl: string;
-}
 
 // ============================================
 // EMPIRE TO EPOCH MAPPING
@@ -839,13 +804,6 @@ export interface UserInterestProfile {
   completedEpisodeIds: string[];
   totalEpisodesStarted: number;
   totalEpisodesCompleted: number;
-
-  // Claude-analyzed fields (updated lazily)
-  inferredInterests: string[];
-  knowledgeGaps: string[];
-  personalityNotes: string;
-  explorationStyle: string;
-  lastAnalyzedAt: Date | null;
 
   updatedAt: Date;
 }

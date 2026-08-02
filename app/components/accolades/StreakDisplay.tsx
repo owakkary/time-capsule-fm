@@ -132,7 +132,7 @@ export function StreakCard({
 
 function getStreakMessage(current: number, longest: number): string {
   if (current === 0) {
-    return 'Generate an episode today to start your streak!';
+    return 'Listen to a chapter today to start your streak!';
   }
   if (current === longest && current > 1) {
     return `You're on your best streak ever! Keep it going!`;

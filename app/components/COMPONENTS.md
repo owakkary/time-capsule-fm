@@ -14,10 +14,8 @@ Shared UI components used across multiple pages. All components follow the vinta
 
 | Component | Props | Description |
 |-----------|-------|-------------|
-| `EpisodeGenerator.tsx` | `onEpisodeGenerated(id)` | Main generation orchestrator |
-| `EmpireSelector.tsx` | `onSelectEmpire(id)` | Two-level epoch→empire picker |
+| `RecommendationCard.tsx` | `recommendation`, `onPlay`, `onSkip` | Personalized suggestion card, links straight to `/episode/{id}` |
 | `EraSelector.tsx` | `onSelectEra(id)` | Legacy era selector (deprecated) |
-| `DurationSelector.tsx` | `selected`, `onSelect(min)` | Episode duration picker |
 | `EmpireCard.tsx` | `empire`, `onClick` | Empire display card |
 | `EpochCard.tsx` | `epoch`, `onClick` | Epoch display card |
 | `FigureCard.tsx` | `figure`, `onClick?` | Historical figure with favorites |
@@ -66,9 +64,9 @@ Shared UI components used across multiple pages. All components follow the vinta
 
 | Item | Convention | Example |
 |------|------------|---------|
-| File | PascalCase | `EpisodeGenerator.tsx` |
-| Component | PascalCase | `export default function EpisodeGenerator` |
-| Props interface | `{Name}Props` | `interface EpisodeGeneratorProps` |
+| File | PascalCase | `RecommendationCard.tsx` |
+| Component | PascalCase | `export default function RecommendationCard` |
+| Props interface | `{Name}Props` | `interface RecommendationCardProps` |
 
 ---
 
@@ -150,84 +148,34 @@ export default function FigureCard({ figure, onClick }: FigureCardProps) {
 }
 ```
 
-### Selector Pattern
+### Recommendation Card Pattern
+
+`RecommendationCard.tsx` is the closest thing to a "selector with an action" left in the app now that content is pre-generated and playback is instant — no loading/duration-selection patterns are needed anymore since there's no generation step to wait on.
 
 ```typescript
 'use client';
 
-import { DURATIONS } from '@/types';
+import { Recommendation } from '@/types';
 
-interface DurationSelectorProps {
-  selected: number | null;
-  onSelect: (minutes: number) => void;
+interface RecommendationCardProps {
+  recommendation: Recommendation;
+  onPlay: (rec: Recommendation) => void;
+  onSkip: (rec: Recommendation) => void;
 }
 
-export default function DurationSelector({ selected, onSelect }: DurationSelectorProps) {
+export default function RecommendationCard({ recommendation, onPlay, onSkip }: RecommendationCardProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      {DURATIONS.map((duration, index) => (
-        <button
-          key={duration.minutes}
-          onClick={() => onSelect(duration.minutes)}
-          className={`
-            p-4 rounded-lg border-2 transition-all
-            animate-fade-in-up
-            ${selected === duration.minutes
-              ? 'border-brass bg-brass/10'
-              : 'border-transparent bg-parchment-dark hover:border-brass/50'
-            }
-          `}
-          style={{ animationDelay: `${index * 100}ms` }}
-        >
-          <div className="font-display text-2xl text-ink">{duration.label}</div>
-          <div className="text-sepia text-sm">{duration.description}</div>
-        </button>
-      ))}
+    <div className="card-antiquarian">
+      <h3 className="font-display text-lg font-bold text-ink">{recommendation.title}</h3>
+      <p className="text-sepia-light italic">{recommendation.hostPitch}</p>
+      <button onClick={() => onPlay(recommendation)} className="btn-primary">
+        Start Listening
+      </button>
+      <button onClick={() => onSkip(recommendation)} className="btn-secondary">
+        Not Now
+      </button>
     </div>
   );
-}
-```
-
-### Component with Loading State
-
-```typescript
-'use client';
-
-import { useState } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-
-const LOADING_FACTS = [
-  "Cleopatra lived closer to the Moon landing than to the building of the Great Pyramid.",
-  "Oxford University is older than the Aztec Empire.",
-  // ...
-];
-
-export default function EpisodeGenerator({ onEpisodeGenerated }) {
-  const { getIdToken } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const [factIndex, setFactIndex] = useState(0);
-
-  // Rotate facts during loading
-  useEffect(() => {
-    if (!loading) return;
-    const interval = setInterval(() => {
-      setFactIndex(i => (i + 1) % LOADING_FACTS.length);
-    }, 4000);
-    return () => clearInterval(interval);
-  }, [loading]);
-
-  if (loading) {
-    return (
-      <div className="text-center py-12">
-        <div className="animate-spin-slow w-12 h-12 border-4 border-brass border-t-transparent rounded-full mx-auto" />
-        <p className="text-sepia mt-4 animate-fade-in-up">
-          {LOADING_FACTS[factIndex]}
-        </p>
-      </div>
-    );
-  }
-
-  // ... rest of component
 }
 ```
 

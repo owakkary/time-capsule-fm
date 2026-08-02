@@ -17,7 +17,7 @@ export default function AppHeader({ profile, onSignOut }: AppHeaderProps) {
     { href: '/dashboard', label: 'Explore' },
     { href: '/figures', label: 'Figures' },
     { href: '/moments', label: 'Moments' },
-    { href: '/episodes', label: 'My Episodes' },
+    { href: '/episodes', label: 'My Journey' },
   ];
 
   const isActive = (href: string) => {

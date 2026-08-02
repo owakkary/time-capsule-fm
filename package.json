@@ -8,10 +8,16 @@
     "start": "next start",
     "lint": "next lint",
     "download-geo": "node scripts/download-natural-earth.js",
-    "download-geo:hires": "node scripts/download-natural-earth.js --high-res"
+    "download-geo:hires": "node scripts/download-natural-earth.js --high-res",
+    "generate-library": "tsx scripts/generate-content-library.ts",
+    "generate-library:dry-run": "tsx scripts/generate-content-library.ts --dry-run"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.14.0",
+    "@anthropic-ai/sdk": "^0.115.0",
+    "@capacitor/cli": "^8.4.2",
+    "@capacitor/core": "^8.4.2",
+    "@capacitor/ios": "^8.4.2",
+    "@capacitor/status-bar": "^8.0.3",
     "@types/d3-geo": "^3.1.0",
     "@types/d3-selection": "^3.0.11",
     "@types/leaflet": "^1.9.21",
@@ -29,13 +35,20 @@
     "topojson-client": "^3.1.0"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "@tailwindcss/forms": "^0.5.7",
     "@types/node": "^20.10.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "autoprefixer": "^10.4.16",
+    "dotenv": "^17.4.2",
     "postcss": "^8.4.32",
     "tailwindcss": "^3.4.0",
+    "tsx": "^4.23.1",
     "typescript": "^5.3.0"
+  },
+  "allowScripts": {
+    "sharp@0.32.6": true,
+    "esbuild@0.28.1": true
   }
 }

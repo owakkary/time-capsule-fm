@@ -4,13 +4,13 @@ import { Recommendation, getEmpire } from '@/types';
 
 interface RecommendationCardProps {
   recommendation: Recommendation;
-  onGenerate: (rec: Recommendation) => void;
+  onPlay: (rec: Recommendation) => void;
   onSkip: (rec: Recommendation) => void;
 }
 
 export default function RecommendationCard({
   recommendation,
-  onGenerate,
+  onPlay,
   onSkip,
 }: RecommendationCardProps) {
   const empire = getEmpire(recommendation.empire);
@@ -41,10 +41,10 @@ export default function RecommendationCard({
       {/* Actions */}
       <div className="flex items-center gap-3 mt-auto pt-2">
         <button
-          onClick={() => onGenerate(recommendation)}
+          onClick={() => onPlay(recommendation)}
           className="btn-primary !px-5 !py-2.5 !text-sm flex-1"
         >
-          Generate Episode
+          Start Listening
         </button>
         <button
           onClick={() => onSkip(recommendation)}

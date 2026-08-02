@@ -1,10 +1,11 @@
 import { ContentType } from '@/types';
 
-// ElevenLabs voice IDs
+// ElevenLabs voice IDs — premade voices available on the free API plan
+// (library/shared voices like the previous British trio require a paid plan)
 const VOICES = {
-  host: '9IzcwKmvwJcw58h3KnlH',       // Julian — British, default host
-  malePerspective: 'JBFqnCBsd6RMkjVDRZzb', // George — warm, British, middle-aged
-  femalePerspective: 'pFZP5JQG7iQjIQuC4Bku', // Lily — British, warm, clear
+  host: 'pNInz6obpgDQGcFmaJgB',       // Adam — default host
+  malePerspective: 'ErXwobaYiN019PkySvjV', // Antoni — male perspective characters
+  femalePerspective: 'EXAVITQu4vr4xnSDxMaL', // Bella — female perspective characters
 } as const;
 
 // Perspective IDs that use the female voice
