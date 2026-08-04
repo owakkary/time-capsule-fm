@@ -9,6 +9,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { useEventLogger } from '@/hooks/useEventLogger';
 import { useExplorerProgress } from '@/hooks/useExplorerProgress';
 import { getEmpire, EPOCHS, ContentLibraryItem, EmpireId, EpochId, ContentType } from '@/types';
+import EpisodeQuiz from '@/app/components/EpisodeQuiz';
+
+// Average spoken pace used to estimate duration for browser-speech
+// episodes, which have no audio file to read a real duration from.
+const WORDS_PER_MINUTE = 150;
 
 export default function EpisodePage({ params }: { params: { id: string } }) {
   const episodeId = params.id;
@@ -22,11 +27,18 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [showQuiz, setShowQuiz] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
+
+  // Browser-speech (Web Speech API) playback state — used when the episode
+  // has no pre-rendered ElevenLabs audioUrl.
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const speechIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Engagement tracking refs
   const hasStartedRef = useRef(false);
-  const hasCompletedRef = useRef(false);
+  const hasFinishedListeningRef = useRef(false); // reached the end of the audio/speech
+  const hasCompletedRef = useRef(false); // passed the quiz — this is what unlocks XP
   const progressRef = useRef(0);
   const durationRef = useRef(0);
   const logEventRef = useRef(logEvent);
@@ -82,6 +94,13 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
     return () => {
       window.removeEventListener('beforeunload', handleAbandon);
       handleAbandon();
+      // Stop any in-flight browser speech when navigating away.
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+      if (speechIntervalRef.current) {
+        clearInterval(speechIntervalRef.current);
+      }
     };
   }, []);
 
@@ -99,10 +118,14 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
         const snap = await getDoc(doc(db, 'contentLibrary', episodeId));
         if (snap.exists()) {
           const data = snap.data();
-          setEpisode({
+          const item = {
             ...data,
             createdAt: data.createdAt?.toDate?.() || new Date(),
-          } as ContentLibraryItem);
+          } as ContentLibraryItem;
+          setEpisode(item);
+          if (item.audioProvider === 'browser-speech') {
+            setDuration(Math.round((item.wordCount / WORDS_PER_MINUTE) * 60));
+          }
         } else {
           setNotFound(true);
         }
@@ -124,34 +147,14 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
     router.push('/login');
   };
 
-  const togglePlay = () => {
-    if (!audioRef.current || !episode) return;
-
-    if (isPlaying) {
-      audioRef.current.pause();
-    } else {
-      audioRef.current.play();
-
-      // Fire episode_started + award discovery XP on first play
-      if (!hasStartedRef.current) {
-        hasStartedRef.current = true;
-        logEvent({ eventType: 'episode_started', ...getEventFields() });
-        recordEpisodeGenerated(
-          episode.empireId as EmpireId,
-          episode.epochId as EpochId,
-          episode.contentType as ContentType,
-          episode.contentId || undefined
-        );
-        touchListeningHistory(episode, false);
-      }
-
-      // Fire episode_replayed if playing again after completion
-      if (hasCompletedRef.current) {
-        logEvent({ eventType: 'episode_replayed', ...getEventFields() });
-      }
-    }
-    setIsPlaying(!isPlaying);
-  };
+  // Reached the end of playback (audio or speech) — reveal the quiz.
+  // XP/badges/listening-history-completed still wait for a passed quiz.
+  const handleEpisodeEnd = useCallback(() => {
+    if (hasFinishedListeningRef.current) return;
+    hasFinishedListeningRef.current = true;
+    setIsPlaying(false);
+    setShowQuiz(true);
+  }, []);
 
   const handleComplete = useCallback((completionPercentage: number) => {
     if (hasCompletedRef.current || !episode) return;
@@ -165,6 +168,111 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
     touchListeningHistory(episode, true);
   }, [episode, recordEpisodeCompleted, touchListeningHistory, logEvent, getEventFields]);
 
+  const handleQuizPass = useCallback((score: number) => {
+    if (!episode) return;
+    logEvent({
+      eventType: 'quiz_passed',
+      ...getEventFields(),
+      completionPercentage: Math.round((score / episode.quiz.length) * 100),
+    });
+    handleComplete(100);
+  }, [episode, logEvent, getEventFields, handleComplete]);
+
+  const handleQuizFail = useCallback((score: number) => {
+    if (!episode) return;
+    logEvent({
+      eventType: 'quiz_failed',
+      ...getEventFields(),
+      completionPercentage: Math.round((score / episode.quiz.length) * 100),
+    });
+  }, [episode, logEvent, getEventFields]);
+
+  const onFirstPlay = useCallback(() => {
+    if (hasStartedRef.current || !episode) return;
+    hasStartedRef.current = true;
+    logEvent({ eventType: 'episode_started', ...getEventFields() });
+    recordEpisodeGenerated(
+      episode.empireId as EmpireId,
+      episode.epochId as EpochId,
+      episode.contentType as ContentType,
+      episode.contentId || undefined
+    );
+    touchListeningHistory(episode, false);
+  }, [episode, logEvent, getEventFields, recordEpisodeGenerated, touchListeningHistory]);
+
+  const toggleAudioPlay = () => {
+    if (!audioRef.current || !episode) return;
+
+    if (isPlaying) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play();
+      onFirstPlay();
+      if (hasFinishedListeningRef.current) {
+        logEvent({ eventType: 'episode_replayed', ...getEventFields() });
+      }
+    }
+    setIsPlaying(!isPlaying);
+  };
+
+  const toggleSpeechPlay = () => {
+    if (!episode || typeof window === 'undefined' || !window.speechSynthesis) return;
+    const synth = window.speechSynthesis;
+
+    if (isPlaying) {
+      synth.pause();
+      setIsPlaying(false);
+      if (speechIntervalRef.current) clearInterval(speechIntervalRef.current);
+      return;
+    }
+
+    if (synth.paused && utteranceRef.current) {
+      synth.resume();
+      setIsPlaying(true);
+      startSpeechProgressTimer();
+      return;
+    }
+
+    onFirstPlay();
+    if (hasFinishedListeningRef.current) {
+      logEvent({ eventType: 'episode_replayed', ...getEventFields() });
+    }
+
+    synth.cancel();
+    const utterance = new SpeechSynthesisUtterance(episode.script);
+    utterance.rate = 1;
+    utterance.onend = () => {
+      setIsPlaying(false);
+      setProgress(durationRef.current);
+      if (speechIntervalRef.current) clearInterval(speechIntervalRef.current);
+      handleEpisodeEnd();
+    };
+    utterance.onerror = () => {
+      setIsPlaying(false);
+      if (speechIntervalRef.current) clearInterval(speechIntervalRef.current);
+    };
+    utteranceRef.current = utterance;
+    setProgress(0);
+    synth.speak(utterance);
+    setIsPlaying(true);
+    startSpeechProgressTimer();
+  };
+
+  // Web Speech gives no reliable cross-browser progress callback, so we
+  // approximate progress against the word-count-based duration estimate.
+  const startSpeechProgressTimer = () => {
+    if (speechIntervalRef.current) clearInterval(speechIntervalRef.current);
+    speechIntervalRef.current = setInterval(() => {
+      setProgress((p) => {
+        const next = Math.min(p + 0.25, durationRef.current);
+        progressRef.current = next;
+        return next;
+      });
+    }, 250);
+  };
+
+  const togglePlay = episode?.audioProvider === 'browser-speech' ? toggleSpeechPlay : toggleAudioPlay;
+
   const handleTimeUpdate = () => {
     if (!audioRef.current) return;
     const currentTime = audioRef.current.currentTime;
@@ -172,9 +280,8 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
     setProgress(currentTime);
     progressRef.current = currentTime;
 
-    // Fire episode_completed when >= 90% listened
-    if (!hasCompletedRef.current && dur > 0 && currentTime / dur >= 0.9) {
-      handleComplete(Math.round((currentTime / dur) * 100));
+    if (!hasFinishedListeningRef.current && dur > 0 && currentTime / dur >= 0.9) {
+      handleEpisodeEnd();
     }
   };
 
@@ -184,7 +291,12 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
     durationRef.current = audioRef.current.duration;
   };
 
+  useEffect(() => {
+    durationRef.current = duration;
+  }, [duration]);
+
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (episode?.audioProvider === 'browser-speech') return; // seeking isn't supported for Web Speech playback
     if (!audioRef.current) return;
     const time = parseFloat(e.target.value);
     audioRef.current.currentTime = time;
@@ -224,6 +336,7 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
 
   const empire = getEmpire(episode.empireId);
   const epoch = EPOCHS.find(e => e.id === episode.epochId);
+  const isBrowserSpeech = episode.audioProvider === 'browser-speech';
 
   return (
     <div className="min-h-screen">
@@ -265,9 +378,9 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-32">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-32 space-y-8">
         {/* Episode Header */}
-        <div className="card-antiquarian overflow-hidden mb-8">
+        <div className="card-antiquarian overflow-hidden">
           <div className="p-8 bg-parchment-dark border-b border-brass/20">
             <div className="flex items-center gap-2 mb-4">
               <span className="tag-empire text-sm">
@@ -276,22 +389,29 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
               <span className="text-sm text-sepia-light font-body">
                 {episode.durationMinutes} min
               </span>
+              {isBrowserSpeech && (
+                <span className="text-xs text-sepia-light/70 font-body italic">
+                  narrated by your device
+                </span>
+              )}
             </div>
             <h2 className="font-display text-3xl font-bold text-ink">{episode.title}</h2>
           </div>
 
           {/* Audio Player */}
           <div className="p-6 border-b border-brass/20">
-            <audio
-              ref={audioRef}
-              src={episode.audioUrl}
-              onTimeUpdate={handleTimeUpdate}
-              onLoadedMetadata={handleLoadedMetadata}
-              onEnded={() => {
-                setIsPlaying(false);
-                handleComplete(100);
-              }}
-            />
+            {!isBrowserSpeech && (
+              <audio
+                ref={audioRef}
+                src={episode.audioUrl ?? undefined}
+                onTimeUpdate={handleTimeUpdate}
+                onLoadedMetadata={handleLoadedMetadata}
+                onEnded={() => {
+                  setIsPlaying(false);
+                  handleEpisodeEnd();
+                }}
+              />
+            )}
 
             <div className="flex items-center gap-4">
               <button
@@ -316,9 +436,10 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
                   max={duration || 100}
                   value={progress}
                   onChange={handleSeek}
-                  className="w-full h-2 bg-parchment-dark rounded-sm appearance-none cursor-pointer"
+                  disabled={isBrowserSpeech}
+                  className="w-full h-2 bg-parchment-dark rounded-sm appearance-none cursor-pointer disabled:cursor-default"
                   style={{
-                    background: `linear-gradient(to right, var(--color-brass) ${(progress / duration) * 100}%, var(--color-parchment-dark) ${(progress / duration) * 100}%)`,
+                    background: `linear-gradient(to right, var(--color-brass) ${(progress / (duration || 1)) * 100}%, var(--color-parchment-dark) ${(progress / (duration || 1)) * 100}%)`,
                   }}
                 />
                 <div className="flex justify-between text-sm text-sepia-light font-body mt-1">
@@ -337,6 +458,11 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
             </div>
           </div>
         </div>
+
+        {/* Quiz — appears once the episode finishes; passing unlocks XP/badges */}
+        {showQuiz && episode.quiz?.length > 0 && (
+          <EpisodeQuiz quiz={episode.quiz} onPass={handleQuizPass} onFail={handleQuizFail} />
+        )}
 
         {/* Back link */}
         <div className="text-center">

@@ -1,5 +1,6 @@
 import { EmpireId, getEmpire } from '@/types';
 import { getFigure, getMoment, getPerspective, getOverview } from '@/lib/firebase-admin';
+import { QUIZ_QUESTION_COUNT } from '@/lib/quiz';
 
 // Every item in the content library is generated once at this fixed length.
 export const TARGET_DURATION_MINUTES = 10;
@@ -95,3 +96,36 @@ export function buildTitlePrompt(contentType: string, script: string): string {
     ? `Generate a short, evocative title (max 6 words) for this first-person historical narrative. Make it intriguing. Just the title, nothing else:\n\n${script.slice(0, 500)}`
     : `Generate a short, catchy podcast episode title (max 6 words) for this history content. Just the title, nothing else:\n\n${script.slice(0, 500)}`;
 }
+
+export function buildQuizPrompt(script: string): string {
+  return `Write ${QUIZ_QUESTION_COUNT} short multiple-choice comprehension questions testing whether a listener actually absorbed the specific facts in this episode script — names, dates, causes, outcomes. Avoid vague or vibes-based questions; each question must have exactly one clearly correct answer supported by the script.
+
+Each question needs exactly 4 answer options. Return the correct answer's index (0-3) in "correctIndex".
+
+Episode script:
+${script}`;
+}
+
+// JSON Schema for output_config.format on the quiz-generation call.
+// Deliberately no minItems/maxItems (unsupported by structured outputs) —
+// the prompt asks for exactly QUIZ_QUESTION_COUNT and the caller clamps.
+export const QUIZ_OUTPUT_SCHEMA = {
+  type: 'object',
+  properties: {
+    questions: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          question: { type: 'string' },
+          options: { type: 'array', items: { type: 'string' } },
+          correctIndex: { type: 'integer' },
+        },
+        required: ['question', 'options', 'correctIndex'],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['questions'],
+  additionalProperties: false,
+} as const;
