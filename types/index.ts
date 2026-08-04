@@ -10,6 +10,17 @@ export interface UserProfile {
 
 // A pre-generated, shared episode in the static content library.
 // Stored at contentLibrary/{id} — id is deterministic, see lib/content-library.ts.
+export interface QuizQuestion {
+  question: string;
+  options: string[];
+  correctIndex: number;
+}
+
+// How this item's audio is produced: 'elevenlabs' for the pre-rendered mp3
+// at audioUrl, 'browser-speech' for items narrated client-side via the
+// Web Speech API (no audioUrl, kept free of ongoing TTS cost).
+export type AudioProvider = 'elevenlabs' | 'browser-speech';
+
 export interface ContentLibraryItem {
   id: string;
   contentType: ContentType;
@@ -20,9 +31,11 @@ export interface ContentLibraryItem {
   script: string;
   durationMinutes: number;
   voiceId: string;
-  audioUrl: string;
+  audioProvider: AudioProvider;
+  audioUrl: string | null; // null when audioProvider is 'browser-speech'
   audioDurationSeconds: number | null;
   wordCount: number;
+  quiz: QuizQuestion[];
   createdAt: Date;
 }
 
@@ -777,7 +790,9 @@ export type EngagementEventType =
   | 'episode_abandoned'
   | 'episode_replayed'
   | 'recommendation_clicked'
-  | 'recommendation_skipped';
+  | 'recommendation_skipped'
+  | 'quiz_passed'
+  | 'quiz_failed';
 
 // Engagement event stored at users/{userId}/explorer/profile/events/{auto-id}
 export interface EngagementEvent {

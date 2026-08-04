@@ -15,23 +15,31 @@ import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 
-import { EMPIRES, EMPIRE_TO_EPOCH, ContentType, EmpireId } from '../types';
+import { EMPIRES, EMPIRE_TO_EPOCH, ContentType, EmpireId, QuizQuestion } from '../types';
 import { KEY_FIGURES } from '../lib/seed-data/figures';
 import { KEY_MOMENTS } from '../lib/seed-data/moments';
 import { PERSPECTIVES } from '../lib/seed-data/perspectives';
 import { getVoiceId } from '../lib/voice-mapping';
 import { getContentLibraryItemId } from '../lib/content-library';
+import { QUIZ_QUESTION_COUNT } from '../lib/quiz';
 import {
   SYSTEM_PROMPT,
   PERSPECTIVE_SYSTEM_PROMPT,
   TARGET_DURATION_MINUTES,
   TARGET_WORD_COUNT,
+  QUIZ_OUTPUT_SCHEMA,
   buildPromptForOverview,
   buildPromptForFigure,
   buildPromptForMoment,
   buildPromptForPerspective,
   buildTitlePrompt,
+  buildQuizPrompt,
 } from '../lib/content-generation';
+
+// Empires that get real ElevenLabs narration; every other empire's content
+// still gets a script + quiz, but is narrated client-side via the free
+// Web Speech API to keep TTS cost bounded to this fixed set.
+const FULL_AUDIO_EMPIRES: EmpireId[] = ['ancient-egypt', 'classical-greece', 'roman-empire'];
 
 const app = initializeApp({
   credential: cert({
@@ -50,6 +58,11 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 // (both free) but skips every paid Claude/ElevenLabs call, so you can
 // preview exactly what a real run would do before spending anything.
 const DRY_RUN = process.argv.includes('--dry-run');
+
+// --limit=N: stop after generating N real items, for cheaply spot-checking
+// a run (e.g. the quiz JSON shape) before committing to the full worklist.
+const limitArg = process.argv.find((a) => a.startsWith('--limit='));
+const LIMIT = limitArg ? parseInt(limitArg.split('=')[1], 10) : Infinity;
 
 interface WorkItem {
   contentType: ContentType;
@@ -89,6 +102,21 @@ function buildPrompt(item: WorkItem): string {
   }
 }
 
+function parseQuiz(rawText: string): QuizQuestion[] {
+  const parsed = JSON.parse(rawText) as { questions?: unknown[] };
+  const questions = Array.isArray(parsed.questions) ? parsed.questions : [];
+
+  return questions
+    .filter((q): q is QuizQuestion => {
+      const c = q as Partial<QuizQuestion>;
+      return typeof c.question === 'string'
+        && Array.isArray(c.options) && c.options.length === 4
+        && typeof c.correctIndex === 'number'
+        && c.correctIndex >= 0 && c.correctIndex < 4;
+    })
+    .slice(0, QUIZ_QUESTION_COUNT);
+}
+
 async function generateOne(item: WorkItem, itemId: string) {
   const prompt = buildPrompt(item);
   const systemPrompt = item.contentType === 'perspective' ? PERSPECTIVE_SYSTEM_PROMPT : SYSTEM_PROMPT;
@@ -112,33 +140,48 @@ async function generateOne(item: WorkItem, itemId: string) {
     ? titleMessage.content[0].text.trim().replace(/"/g, '')
     : 'History Episode';
 
-  const voiceId = getVoiceId(item.contentType, item.contentId ?? undefined);
-  const ttsResponse = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
-    method: 'POST',
-    headers: {
-      Accept: 'audio/mpeg',
-      'Content-Type': 'application/json',
-      'xi-api-key': process.env.ELEVENLABS_API_KEY!,
-    },
-    body: JSON.stringify({
-      text: script,
-      model_id: 'eleven_multilingual_v2',
-      voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0.5, use_speaker_boost: true },
-    }),
+  const quizMessage = await anthropic.messages.create({
+    model: 'claude-sonnet-5',
+    max_tokens: 1200,
+    thinking: { type: 'disabled' },
+    output_config: { format: { type: 'json_schema', schema: QUIZ_OUTPUT_SCHEMA } },
+    messages: [{ role: 'user', content: buildQuizPrompt(script) }],
   });
+  const quizText = quizMessage.content[0].type === 'text' ? quizMessage.content[0].text : '{}';
+  const quiz = parseQuiz(quizText);
 
-  if (!ttsResponse.ok) {
-    const errorText = await ttsResponse.text();
-    throw new Error(`ElevenLabs error (${ttsResponse.status}): ${errorText}`);
+  const voiceId = getVoiceId(item.contentType, item.contentId ?? undefined);
+  const useElevenLabs = FULL_AUDIO_EMPIRES.includes(item.empireId);
+
+  let audioUrl: string | null = null;
+  if (useElevenLabs) {
+    const ttsResponse = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+      method: 'POST',
+      headers: {
+        Accept: 'audio/mpeg',
+        'Content-Type': 'application/json',
+        'xi-api-key': process.env.ELEVENLABS_API_KEY!,
+      },
+      body: JSON.stringify({
+        text: script,
+        model_id: 'eleven_multilingual_v2',
+        voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0.5, use_speaker_boost: true },
+      }),
+    });
+
+    if (!ttsResponse.ok) {
+      const errorText = await ttsResponse.text();
+      throw new Error(`ElevenLabs error (${ttsResponse.status}): ${errorText}`);
+    }
+
+    const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());
+    const bucket = storage.bucket();
+    const fileName = `content-library/${itemId}.mp3`;
+    const file = bucket.file(fileName);
+    await file.save(audioBuffer, { metadata: { contentType: 'audio/mpeg' } });
+    await file.makePublic();
+    audioUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
   }
-
-  const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());
-  const bucket = storage.bucket();
-  const fileName = `content-library/${itemId}.mp3`;
-  const file = bucket.file(fileName);
-  await file.save(audioBuffer, { metadata: { contentType: 'audio/mpeg' } });
-  await file.makePublic();
-  const audioUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
 
   await db.collection('contentLibrary').doc(itemId).set({
     id: itemId,
@@ -150,9 +193,11 @@ async function generateOne(item: WorkItem, itemId: string) {
     script,
     durationMinutes: TARGET_DURATION_MINUTES,
     voiceId,
+    audioProvider: useElevenLabs ? 'elevenlabs' : 'browser-speech',
     audioUrl,
     audioDurationSeconds: null,
     wordCount: script.split(/\s+/).length,
+    quiz,
     createdAt: FieldValue.serverTimestamp(),
   });
 }
@@ -191,6 +236,11 @@ async function main() {
     } catch (error) {
       console.error(`${progress} FAILED: ${itemId}`, error);
       failed++;
+    }
+
+    if (created >= LIMIT) {
+      console.log(`\nHit --limit=${LIMIT}, stopping early.`);
+      break;
     }
   }
 
