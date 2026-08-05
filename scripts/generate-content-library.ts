@@ -64,6 +64,15 @@ const DRY_RUN = process.argv.includes('--dry-run');
 const limitArg = process.argv.find((a) => a.startsWith('--limit='));
 const LIMIT = limitArg ? parseInt(limitArg.split('=')[1], 10) : Infinity;
 
+// --backfill: repair existing docs instead of creating missing ones.
+// Because a normal run skips any item that already has a doc, items written
+// before a field was introduced would otherwise keep the old shape forever —
+// and an item with no quiz can never be completed by a user, so its XP is
+// unreachable. Backfill regenerates only the missing pieces from the script
+// already stored in Firestore: one cheap Claude call for the quiz, and no
+// ElevenLabs call at all, so it never re-pays for narration.
+const BACKFILL = process.argv.includes('--backfill');
+
 interface WorkItem {
   contentType: ContentType;
   contentId: string | null;
@@ -117,6 +126,20 @@ function parseQuiz(rawText: string): QuizQuestion[] {
     .slice(0, QUIZ_QUESTION_COUNT);
 }
 
+// Generates a quiz from an already-written script. Shared by the create path
+// and the --backfill path so both produce identically-shaped quizzes.
+async function generateQuizForScript(script: string): Promise<QuizQuestion[]> {
+  const quizMessage = await anthropic.messages.create({
+    model: 'claude-sonnet-5',
+    max_tokens: 1200,
+    thinking: { type: 'disabled' },
+    output_config: { format: { type: 'json_schema', schema: QUIZ_OUTPUT_SCHEMA } },
+    messages: [{ role: 'user', content: buildQuizPrompt(script) }],
+  });
+  const quizText = quizMessage.content[0].type === 'text' ? quizMessage.content[0].text : '{}';
+  return parseQuiz(quizText);
+}
+
 async function generateOne(item: WorkItem, itemId: string) {
   const prompt = buildPrompt(item);
   const systemPrompt = item.contentType === 'perspective' ? PERSPECTIVE_SYSTEM_PROMPT : SYSTEM_PROMPT;
@@ -140,15 +163,7 @@ async function generateOne(item: WorkItem, itemId: string) {
     ? titleMessage.content[0].text.trim().replace(/"/g, '')
     : 'History Episode';
 
-  const quizMessage = await anthropic.messages.create({
-    model: 'claude-sonnet-5',
-    max_tokens: 1200,
-    thinking: { type: 'disabled' },
-    output_config: { format: { type: 'json_schema', schema: QUIZ_OUTPUT_SCHEMA } },
-    messages: [{ role: 'user', content: buildQuizPrompt(script) }],
-  });
-  const quizText = quizMessage.content[0].type === 'text' ? quizMessage.content[0].text : '{}';
-  const quiz = parseQuiz(quizText);
+  const quiz = await generateQuizForScript(script);
 
   const voiceId = getVoiceId(item.contentType, item.contentId ?? undefined);
   const useElevenLabs = FULL_AUDIO_EMPIRES.includes(item.empireId);
@@ -202,7 +217,73 @@ async function generateOne(item: WorkItem, itemId: string) {
   });
 }
 
+// Repairs existing docs that predate a schema addition. Only ever fills in
+// what's missing — it never rewrites a script, title, or audio file, so it
+// costs at most one Claude call per stale doc and zero ElevenLabs credits.
+async function runBackfill() {
+  const snap = await db.collection('contentLibrary').get();
+  console.log(`Backfill scan: ${snap.size} existing docs${DRY_RUN ? ' (DRY RUN — no API calls will be made)' : ''}`);
+
+  const stale = snap.docs.filter((doc) => {
+    const d = doc.data();
+    const needsQuiz = !Array.isArray(d.quiz) || d.quiz.length === 0;
+    const needsProvider = d.audioProvider === undefined;
+    return needsQuiz || needsProvider;
+  });
+
+  if (stale.length === 0) {
+    console.log('Nothing to backfill — every doc already has a quiz and an audioProvider.');
+    return;
+  }
+
+  console.log(`${stale.length} doc(s) need backfilling.`);
+  let repaired = 0;
+  let failed = 0;
+
+  for (let i = 0; i < stale.length; i++) {
+    const doc = stale[i];
+    const d = doc.data();
+    const progress = `[${i + 1}/${stale.length}]`;
+    const needsQuiz = !Array.isArray(d.quiz) || d.quiz.length === 0;
+    // Docs written before audioProvider existed always had a real mp3, so an
+    // existing audioUrl is the correct signal for how they should be played.
+    const provider = d.audioProvider ?? (d.audioUrl ? 'elevenlabs' : 'browser-speech');
+
+    if (DRY_RUN) {
+      console.log(`${progress} would backfill: ${doc.id} (quiz=${needsQuiz ? 'yes' : 'no'}, provider=${provider})`);
+      continue;
+    }
+
+    if (needsQuiz && typeof d.script !== 'string') {
+      console.error(`${progress} SKIP (no stored script to build a quiz from): ${doc.id}`);
+      failed++;
+      continue;
+    }
+
+    try {
+      const update: Record<string, unknown> = { audioProvider: provider };
+      if (needsQuiz) update.quiz = await generateQuizForScript(d.script);
+      await doc.ref.set(update, { merge: true });
+      const n = Array.isArray(update.quiz) ? (update.quiz as QuizQuestion[]).length : 'unchanged';
+      console.log(`${progress} backfilled: ${doc.id} (quiz=${n}, provider=${provider})`);
+      repaired++;
+    } catch (error) {
+      console.error(`${progress} FAILED: ${doc.id}`, error);
+      failed++;
+    }
+  }
+
+  if (DRY_RUN) return;
+  console.log(`\nBackfill done. Repaired ${repaired}, failed ${failed}.`);
+  if (failed > 0) process.exit(1);
+}
+
 async function main() {
+  if (BACKFILL) {
+    await runBackfill();
+    return;
+  }
+
   const worklist = buildWorklist();
   console.log(`Content library worklist: ${worklist.length} items${DRY_RUN ? ' (DRY RUN — no API calls will be made)' : ''}`);
 

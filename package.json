@@ -10,7 +10,10 @@
     "download-geo": "node scripts/download-natural-earth.js",
     "download-geo:hires": "node scripts/download-natural-earth.js --high-res",
     "generate-library": "tsx scripts/generate-content-library.ts",
-    "generate-library:dry-run": "tsx scripts/generate-content-library.ts --dry-run"
+    "generate-library:dry-run": "tsx scripts/generate-content-library.ts --dry-run",
+    "backfill-library": "tsx scripts/generate-content-library.ts --backfill",
+    "backfill-library:dry-run": "tsx scripts/generate-content-library.ts --backfill --dry-run",
+    "audit-library": "tsx scripts/audit-library.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",

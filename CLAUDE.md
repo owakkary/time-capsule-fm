@@ -109,6 +109,20 @@ When generating images for this project:
 
 `contentLibrary/{itemId}` is a public-read, write-only-by-batch-script Firestore collection holding one pre-generated episode per content item — `itemId` is a deterministic slug from `lib/content-library.ts` (`overview-{empireId}`, `figure-{figureId}`, `moment-{momentId}`, `perspective-{perspectiveId}`). Audio lives at Storage path `content-library/{itemId}.mp3` (public read). To regenerate/extend it, edit the prompt logic in `lib/content-generation.ts` and re-run `npm run generate-library` — it's idempotent and skips items that already exist.
 
+### Schema drift and backfilling
+
+That skip-if-exists rule is what makes the job cheap to resume, but it also means **adding a field to `ContentLibraryItem` never reaches items already in the collection** — a normal re-run will not touch them. So new fields must be optional in `types/index.ts` and read through the helpers in `lib/content-library.ts` (`getAudioProvider`, `getQuiz`, `hasQuiz`), which give legacy items sane defaults. This matters most for `quiz`: XP and badges are gated on passing a quiz, so an item with no quiz would be uncompletable and its XP unreachable — `getQuiz`/`hasQuiz` let the episode page fall back to "finishing it completes it".
+
+```bash
+npm run audit-library            # read-only: which docs are missing which fields
+npm run backfill-library:dry-run # preview the repair, no API calls
+npm run backfill-library         # repair in place
+```
+
+`--backfill` only fills in what's missing, reusing the script already stored in Firestore: one cheap Claude call per stale doc for the quiz, and **no ElevenLabs call**, so it never re-pays for narration.
+
+**Long runs:** a full `generate-library` run takes ~2.5h and is killed if its parent shell dies. Launch it detached (`nohup npm run generate-library >> /tmp/gen.log 2>&1 & disown`) so a closing terminal or session can't take it down mid-run.
+
 ## Data Model
 
 ### Firestore Structure

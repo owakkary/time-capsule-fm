@@ -31,11 +31,16 @@ export interface ContentLibraryItem {
   script: string;
   durationMinutes: number;
   voiceId: string;
-  audioProvider: AudioProvider;
+  // Optional because items generated before these fields existed are still in
+  // the library and are never rewritten (the batch script skips existing docs).
+  // Read them through the helpers in lib/content-library.ts rather than
+  // directly, so legacy items degrade gracefully instead of breaking playback
+  // or stranding the user on an episode they can't complete.
+  audioProvider?: AudioProvider;
   audioUrl: string | null; // null when audioProvider is 'browser-speech'
   audioDurationSeconds: number | null;
   wordCount: number;
-  quiz: QuizQuestion[];
+  quiz?: QuizQuestion[];
   createdAt: Date;
 }
 

@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useEventLogger } from '@/hooks/useEventLogger';
 import { useExplorerProgress } from '@/hooks/useExplorerProgress';
 import { getEmpire, EPOCHS, ContentLibraryItem, EmpireId, EpochId, ContentType } from '@/types';
+import { getAudioProvider, getQuiz, hasQuiz } from '@/lib/content-library';
 import EpisodeQuiz from '@/app/components/EpisodeQuiz';
 
 // Average spoken pace used to estimate duration for browser-speech
@@ -43,6 +44,9 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
   const durationRef = useRef(0);
   const logEventRef = useRef(logEvent);
   const episodeRef = useRef(episode);
+  // Lets handleEpisodeEnd complete a quiz-less episode without depending on
+  // handleComplete, which is defined below it.
+  const handleCompleteRef = useRef<(completionPercentage: number) => void>(() => {});
 
   // Keep refs in sync without triggering effects
   logEventRef.current = logEvent;
@@ -123,7 +127,7 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
             createdAt: data.createdAt?.toDate?.() || new Date(),
           } as ContentLibraryItem;
           setEpisode(item);
-          if (item.audioProvider === 'browser-speech') {
+          if (getAudioProvider(item) === 'browser-speech') {
             setDuration(Math.round((item.wordCount / WORDS_PER_MINUTE) * 60));
           }
         } else {
@@ -148,11 +152,19 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
   };
 
   // Reached the end of playback (audio or speech) — reveal the quiz.
-  // XP/badges/listening-history-completed still wait for a passed quiz.
+  // XP/badges/listening-history-completed wait for a passed quiz, EXCEPT for
+  // items that have no quiz at all (generated before quizzes existed). Those
+  // fall back to the original "finishing it completes it" rule, otherwise
+  // their XP would be permanently unreachable.
   const handleEpisodeEnd = useCallback(() => {
     if (hasFinishedListeningRef.current) return;
     hasFinishedListeningRef.current = true;
     setIsPlaying(false);
+    const item = episodeRef.current;
+    if (item && !hasQuiz(item)) {
+      handleCompleteRef.current(100);
+      return;
+    }
     setShowQuiz(true);
   }, []);
 
@@ -168,22 +180,26 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
     touchListeningHistory(episode, true);
   }, [episode, recordEpisodeCompleted, touchListeningHistory, logEvent, getEventFields]);
 
+  handleCompleteRef.current = handleComplete;
+
   const handleQuizPass = useCallback((score: number) => {
     if (!episode) return;
+    const total = getQuiz(episode).length;
     logEvent({
       eventType: 'quiz_passed',
       ...getEventFields(),
-      completionPercentage: Math.round((score / episode.quiz.length) * 100),
+      completionPercentage: total > 0 ? Math.round((score / total) * 100) : 100,
     });
     handleComplete(100);
   }, [episode, logEvent, getEventFields, handleComplete]);
 
   const handleQuizFail = useCallback((score: number) => {
     if (!episode) return;
+    const total = getQuiz(episode).length;
     logEvent({
       eventType: 'quiz_failed',
       ...getEventFields(),
-      completionPercentage: Math.round((score / episode.quiz.length) * 100),
+      completionPercentage: total > 0 ? Math.round((score / total) * 100) : 0,
     });
   }, [episode, logEvent, getEventFields]);
 
@@ -271,7 +287,8 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
     }, 250);
   };
 
-  const togglePlay = episode?.audioProvider === 'browser-speech' ? toggleSpeechPlay : toggleAudioPlay;
+  const usesBrowserSpeech = !!episode && getAudioProvider(episode) === 'browser-speech';
+  const togglePlay = usesBrowserSpeech ? toggleSpeechPlay : toggleAudioPlay;
 
   const handleTimeUpdate = () => {
     if (!audioRef.current) return;
@@ -296,7 +313,7 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
   }, [duration]);
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (episode?.audioProvider === 'browser-speech') return; // seeking isn't supported for Web Speech playback
+    if (usesBrowserSpeech) return; // seeking isn't supported for Web Speech playback
     if (!audioRef.current) return;
     const time = parseFloat(e.target.value);
     audioRef.current.currentTime = time;
@@ -336,7 +353,7 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
 
   const empire = getEmpire(episode.empireId);
   const epoch = EPOCHS.find(e => e.id === episode.epochId);
-  const isBrowserSpeech = episode.audioProvider === 'browser-speech';
+  const isBrowserSpeech = getAudioProvider(episode) === 'browser-speech';
 
   return (
     <div className="min-h-screen">
@@ -459,9 +476,10 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
           </div>
         </div>
 
-        {/* Quiz — appears once the episode finishes; passing unlocks XP/badges */}
-        {showQuiz && episode.quiz?.length > 0 && (
-          <EpisodeQuiz quiz={episode.quiz} onPass={handleQuizPass} onFail={handleQuizFail} />
+        {/* Quiz — appears once the episode finishes; passing unlocks XP/badges.
+            Items with no quiz are completed by handleEpisodeEnd instead. */}
+        {showQuiz && hasQuiz(episode) && (
+          <EpisodeQuiz quiz={getQuiz(episode)} onPass={handleQuizPass} onFail={handleQuizFail} />
         )}
 
         {/* Back link */}
