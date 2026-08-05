@@ -1,2 +1,0 @@
-[     563ms] [WARNING] <meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes"> @ https://time-capsule-fm-preview.vercel.app/episode/overview-ancient-egypt:0
-[     881ms] [ERROR] Failed to fetch episode: FirebaseError: Missing or insufficient permissions. @ https://time-capsule-fm-preview.vercel.app/_next/static/chunks/938-f0ef0e41c5e2f028.js:0

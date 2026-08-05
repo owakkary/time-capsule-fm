@@ -1,3 +1,0 @@
-[     174ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "new-password"): (More info: https://goo.gl/9p2vKq) %o @ https://time-capsule-fm-preview.vercel.app/signup:0
-[     174ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "new-password"): (More info: https://goo.gl/9p2vKq) %o @ https://time-capsule-fm-preview.vercel.app/signup:0
-[     283ms] [WARNING] <meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes"> @ https://time-capsule-fm-preview.vercel.app/signup:0

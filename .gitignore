@@ -44,3 +44,9 @@ firebase-debug.log
 firestore-debug.log
 ui-debug.log
 .removed-stage3/
+
+# Playwright MCP session artifacts and local screenshots
+.playwright-mcp/
+*.png
+!public/**/*.png
+!assets/**/*.png
