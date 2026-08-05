@@ -187,7 +187,7 @@ export default function EmpirePage({ params }: { params: { id: string } }) {
         </section>
 
         {/* Key Figures Section */}
-        <section className="opacity-0 animate-fade-in-up animate-stagger-2">
+        <section className={`opacity-0 animate-fade-in-up animate-stagger-2 ${figures.length === 0 ? 'hidden' : ''}`}>
           <h3 className="font-display text-2xl font-bold text-ink mb-4">Key Figures</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {figures.map((figure) => (
@@ -206,7 +206,7 @@ export default function EmpirePage({ params }: { params: { id: string } }) {
         </section>
 
         {/* Key Moments Section */}
-        <section className="opacity-0 animate-fade-in-up animate-stagger-3">
+        <section className={`opacity-0 animate-fade-in-up animate-stagger-3 ${moments.length === 0 ? 'hidden' : ''}`}>
           <h3 className="font-display text-2xl font-bold text-ink mb-4">Key Moments</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {moments.map((moment) => (
@@ -223,8 +223,9 @@ export default function EmpirePage({ params }: { params: { id: string } }) {
           </div>
         </section>
 
-        {/* Perspectives Section */}
-        <section className="opacity-0 animate-fade-in-up animate-stagger-4">
+        {/* Perspectives Section — hidden entirely when the content type is
+            gated, so we don't advertise chapters that aren't there. */}
+        <section className={`opacity-0 animate-fade-in-up animate-stagger-4 ${perspectives.length === 0 ? 'hidden' : ''}`}>
           <h3 className="font-display text-2xl font-bold text-ink mb-4">First-Person Perspectives</h3>
           <p className="text-sepia-light font-body mb-4">
             Experience history through the eyes of people who lived it. These immersive episodes put you in the shoes of different characters from {empire.name}.
