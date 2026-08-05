@@ -7,6 +7,8 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut as firebaseSignOut,
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, Timestamp } from 'firebase/firestore';
@@ -23,6 +25,11 @@ export function useAuth() {
       setLoading(false);
       return;
     }
+
+    // Completes the signInWithRedirect round-trip (the fallback used where
+    // popups aren't available). Errors here are non-fatal: the user simply
+    // isn't signed in, and the login page still works.
+    getRedirectResult(auth).catch(() => {});
 
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
@@ -85,6 +92,22 @@ export function useAuth() {
       const result = await signInWithPopup(auth, googleProvider);
       return { user: result.user, error: null };
     } catch (error: any) {
+      // Popups don't exist in installed home-screen apps (iOS standalone
+      // mode) and some in-app browsers — fall back to the full-page redirect
+      // flow. onAuthStateChanged picks the user up when we land back.
+      const popupUnavailable = [
+        'auth/popup-blocked',
+        'auth/cancelled-popup-request',
+        'auth/operation-not-supported-in-this-environment',
+      ].includes(error.code);
+      if (popupUnavailable) {
+        try {
+          await signInWithRedirect(auth, googleProvider);
+          return { user: null, error: null }; // page is navigating away
+        } catch (redirectError: any) {
+          return { user: null, error: redirectError.message };
+        }
+      }
       return { user: null, error: error.message };
     }
   };
