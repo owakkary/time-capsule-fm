@@ -18,6 +18,17 @@ const sourceSerif = Source_Serif_4({
 export const metadata: Metadata = {
   title: 'Time Capsule FM — A Guided Journey Through Time',
   description: 'A guided audio journey through history — curated chapters about empires, figures, and turning points across the ages.',
+  manifest: '/manifest.webmanifest',
+  icons: {
+    apple: '/apple-touch-icon.png',
+  },
+  // "Add to Home Screen" on iOS opens full-screen with no Safari chrome, so
+  // the web build tests like the real app.
+  appleWebApp: {
+    capable: true,
+    title: 'Time Capsule',
+    statusBarStyle: 'default',
+  },
 };
 
 export const viewport: Viewport = {

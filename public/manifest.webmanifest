@@ -1,0 +1,17 @@
+{
+  "name": "Time Capsule FM",
+  "short_name": "Time Capsule",
+  "description": "A guided audio journey through history — Season 1: The Ancient Mediterranean.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F5E6D3",
+  "theme_color": "#F5E6D3",
+  "icons": [
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
