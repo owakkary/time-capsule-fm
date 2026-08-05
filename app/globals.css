@@ -22,6 +22,21 @@
     scroll-behavior: smooth;
   }
 
+  /* Nothing should ever scroll the page sideways on a phone. A stray wide
+     child now clips instead of dragging the whole layout off-screen. */
+  html,
+  body {
+    overflow-x: hidden;
+    max-width: 100%;
+  }
+
+  /* Clear the fixed mobile tab bar (hidden at md and up). */
+  @media (max-width: 767px) {
+    body {
+      padding-bottom: calc(3.75rem + env(safe-area-inset-bottom));
+    }
+  }
+
   body {
     @apply bg-parchment text-ink;
     background-image:

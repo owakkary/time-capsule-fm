@@ -370,6 +370,17 @@ export default function AccoladesPage() {
             )}
           </div>
         )}
+
+        {/* Sign out lives here on phones — the mobile tab bar has no room for
+            it, and Profile is the natural place to look. */}
+        <div className="md:hidden mt-10 pt-6 border-t border-brass/20 text-center">
+          <button
+            onClick={handleSignOut}
+            className="text-sm text-sepia-light hover:text-sepia transition-colors font-display"
+          >
+            Sign Out
+          </button>
+        </div>
       </main>
     </div>
   );

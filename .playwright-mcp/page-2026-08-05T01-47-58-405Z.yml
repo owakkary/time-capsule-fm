@@ -1,0 +1,30 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e4]:
+    - heading "Time Capsule FM" [level=1] [ref=e8]
+    - paragraph [ref=e9]: Season 1 · The Ancient Mediterranean
+    - paragraph [ref=e10]: Egypt, Greece, and Rome — the three civilizations everything else answers to. Twenty-seven narrated chapters — empires, figures, pivotal moments, and first-person perspectives — with quizzes, badges, and maps to make it stick.
+    - generic [ref=e11]:
+      - link "Start Season 1 Free" [ref=e12] [cursor=pointer]:
+        - /url: /signup
+      - link "Sign In" [ref=e13] [cursor=pointer]:
+        - /url: /login
+    - generic [ref=e14]:
+      - generic [ref=e15]:
+        - img "Ancient Egypt" [ref=e16]
+        - heading "Ancient Egypt" [level=2] [ref=e17]
+        - paragraph [ref=e18]: Three thousand years of pharaohs, pyramids, and a river that ran like clockwork.
+      - generic [ref=e19]:
+        - img "Classical Greece" [ref=e20]
+        - heading "Classical Greece" [level=2] [ref=e21]
+        - paragraph [ref=e22]: Democracy, philosophy, and theatre — invented by people who argued about everything.
+      - generic [ref=e23]:
+        - img "Roman Empire" [ref=e24]
+        - heading "Roman Empire" [level=2] [ref=e25]
+        - paragraph [ref=e26]: Aqueducts, legions, and an empire so vast its roads still shape your commute.
+    - generic [ref=e27]:
+      - heading "Features" [level=3] [ref=e28]
+      - generic [ref=e29]:
+        - generic [ref=e30]: Curated Chapters
+        - generic [ref=e34]: Interactive Maps
+        - generic [ref=e38]: Collectibles
+  - alert [ref=e42]

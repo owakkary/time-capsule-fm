@@ -5,10 +5,15 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useExplorerProgress } from '@/hooks/useExplorerProgress';
-import { EpochId } from '@/types';
-import { getAvailableEpochs, SEASON } from '@/lib/availability';
+import { EmpireId, EpochId } from '@/types';
+import {
+  getAvailableEmpiresForEpoch,
+  getAvailableEpochs,
+  getContentCountsForEmpire,
+  SEASON,
+} from '@/lib/availability';
 import EpochCard from '@/app/components/EpochCard';
-import HistoricalMap from '@/app/components/HistoricalMap';
+import EmpireCard from '@/app/components/EmpireCard';
 import { ExplorerCard } from '@/app/components/accolades';
 import { AppHeader } from '@/app/components/layout';
 import PersonalizedHome from '@/app/components/PersonalizedHome';
@@ -156,16 +161,19 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Historical Map - Shows when epoch is selected */}
+        {/* Empires of the selected epoch. This replaced the Leaflet map,
+            which rendered incorrectly at phone widths and drew territories
+            straight from the GeoJSON — bypassing the availability gate and
+            leaving hidden empires tappable. */}
         {selectedEpoch && (
-          <div className="opacity-0 animate-fade-in-up animate-map-reveal">
-            <div className="mb-4 flex items-center justify-between">
+          <div className="opacity-0 animate-fade-in-up">
+            <div className="mb-4 flex items-center justify-between gap-3">
               <p className="text-sepia-light font-body text-sm">
-                Click on a territory to explore that civilization
+                Choose a civilization to explore
               </p>
               <button
                 onClick={() => setSelectedEpoch(null)}
-                className="text-sm text-sepia-light hover:text-sepia font-display flex items-center gap-1 transition-colors"
+                className="text-sm text-sepia-light hover:text-sepia font-display flex items-center gap-1 transition-colors shrink-0"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -173,7 +181,20 @@ export default function DashboardPage() {
                 Back to Epochs
               </button>
             </div>
-            <HistoricalMap epochId={selectedEpoch} />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {getAvailableEmpiresForEpoch(selectedEpoch).map((empire) => (
+                <EmpireCard
+                  key={empire.id}
+                  id={empire.id as EmpireId}
+                  name={empire.name}
+                  emoji={empire.emoji}
+                  years={empire.years}
+                  color={empire.color}
+                  description={empire.description}
+                  contentCounts={getContentCountsForEmpire(empire.id as EmpireId)}
+                />
+              ))}
+            </div>
           </div>
         )}
       </div>

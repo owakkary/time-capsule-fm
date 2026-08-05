@@ -2,7 +2,7 @@ import { EMPIRES, EmpireId, EpochId, ContentType, UserInterestProfile, getEmpire
 import { KEY_FIGURES } from '@/lib/seed-data/figures';
 import { KEY_MOMENTS } from '@/lib/seed-data/moments';
 import { PERSPECTIVES } from '@/lib/seed-data/perspectives';
-import { isEmpireAvailable } from '@/lib/availability';
+import { isContentTypeAvailable, isEmpireAvailable } from '@/lib/availability';
 import { getContentLibraryItemId } from '@/lib/content-library';
 
 export interface CatalogItem {
@@ -57,8 +57,11 @@ export function getContentCatalog(): CatalogItem[] {
     });
   }
 
-  // Never recommend an episode the UI won't let the user open.
-  return items.filter((item) => isEmpireAvailable(item.empire));
+  // Never recommend an episode the UI won't let the user open, or one whose
+  // content type hasn't been generated yet.
+  return items.filter(
+    (item) => isEmpireAvailable(item.empire) && isContentTypeAvailable(item.contentType)
+  );
 }
 
 /**

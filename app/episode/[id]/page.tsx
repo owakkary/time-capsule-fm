@@ -10,10 +10,11 @@ import { useEventLogger } from '@/hooks/useEventLogger';
 import { useExplorerProgress } from '@/hooks/useExplorerProgress';
 import { getEmpire, EPOCHS, ContentLibraryItem, EmpireId, EpochId, ContentType, ProgressUpdateResult, Recommendation } from '@/types';
 import { getAudioProvider, getQuiz, hasQuiz } from '@/lib/content-library';
-import { isEmpireAvailable } from '@/lib/availability';
+import { isContentTypeAvailable, isEmpireAvailable } from '@/lib/availability';
 import { getContentCatalog } from '@/lib/recommendations';
 import EpisodeQuiz from '@/app/components/EpisodeQuiz';
 import RewardSummary from '@/app/components/RewardSummary';
+import { AppHeader } from '@/app/components/layout';
 
 // Average spoken pace used to estimate duration for browser-speech
 // episodes, which have no audio file to read a real duration from.
@@ -23,7 +24,7 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
   const episodeId = params.id;
   const { user, loading, signOut, getIdToken } = useAuth();
   const { logEvent } = useEventLogger();
-  const { recordEpisodeGenerated, recordEpisodeCompleted } = useExplorerProgress(user?.uid || null);
+  const { profile, recordEpisodeGenerated, recordEpisodeCompleted } = useExplorerProgress(user?.uid || null);
   const router = useRouter();
   const [episode, setEpisode] = useState<ContentLibraryItem | null>(null);
   const [loadingEpisode, setLoadingEpisode] = useState(true);
@@ -137,9 +138,10 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
             ...data,
             createdAt: data.createdAt?.toDate?.() || new Date(),
           } as ContentLibraryItem;
-          // The library holds episodes for empires the UI doesn't offer yet;
-          // don't play one just because someone has the direct link.
-          if (!isEmpireAvailable(item.empireId)) {
+          // The library holds episodes for empires and content types the UI
+          // doesn't offer yet; don't play one just because someone has the
+          // direct link.
+          if (!isEmpireAvailable(item.empireId) || !isContentTypeAvailable(item.contentType)) {
             setNotFound(true);
             return;
           }
@@ -510,33 +512,7 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
 
   return (
     <div className="min-h-screen">
-      {/* Header */}
-      <header className="bg-parchment/80 backdrop-blur-sm border-b border-brass/10 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/dashboard" className="flex items-center gap-3 group">
-              <div className="w-10 h-10 rounded-full bg-brass flex items-center justify-center">
-                <svg className="w-5 h-5 text-parchment" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <h1 className="font-display text-2xl font-bold text-ink group-hover:text-sepia transition-colors">
-                Time Capsule FM
-              </h1>
-            </Link>
-            <nav className="flex items-center gap-6">
-              <Link href="/dashboard" className="nav-link">Explore</Link>
-              <Link href="/figures" className="nav-link">Figures</Link>
-              <Link href="/moments" className="nav-link">Moments</Link>
-              <Link href="/episodes" className="nav-link active">My Journey</Link>
-              <div className="flex items-center gap-3 pl-4 border-l border-brass/20">
-                <Link href="/accolades" className="text-sm text-sepia-light hover:text-sepia transition-colors font-display">Profile</Link>
-                <button onClick={handleSignOut} className="text-sm text-sepia-light hover:text-sepia transition-colors font-display">Sign Out</button>
-              </div>
-            </nav>
-          </div>
-        </div>
-      </header>
+      <AppHeader profile={profile} onSignOut={handleSignOut} />
 
       {/* Breadcrumb */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -735,10 +711,11 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
 
       {/* Sticky Audio Player (when audio exists and scrolled) */}
       <div
-        className="fixed bottom-0 left-0 right-0 bg-parchment border-t border-brass/20 shadow-lg p-4"
+        // Sits above the mobile tab bar (bottom-[3.75rem]) and flush to the
+        // bottom on desktop, where no tab bar exists.
+        className="fixed bottom-[3.75rem] md:bottom-0 left-0 right-0 bg-parchment border-t border-brass/20 shadow-lg p-4 z-40"
         style={{
           display: progress > 0 || isPlaying ? 'block' : 'none',
-          paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
         }}
       >
         <div className="max-w-4xl mx-auto flex items-center gap-4">

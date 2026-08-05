@@ -8,7 +8,7 @@
 // This is a gate, not a deletion: the seed data and generated scripts for the
 // other 18 empires stay put. Widening the app is a one-line change here.
 
-import { EMPIRES, EPOCHS, EmpireId, EpochId } from '@/types';
+import { ContentType, EMPIRES, EPOCHS, EmpireId, EpochId } from '@/types';
 import { KEY_FIGURES } from './seed-data/figures';
 import { KEY_MOMENTS } from './seed-data/moments';
 import { PERSPECTIVES } from './seed-data/perspectives';
@@ -30,6 +30,16 @@ export const SEASON = {
 
 export function isEmpireAvailable(empireId: string | null | undefined): boolean {
   return !!empireId && (AVAILABLE_EMPIRES as string[]).includes(empireId);
+}
+
+// Content types whose episodes actually exist in the library. Perspectives
+// are excluded because the batch job ran out of API credits before reaching
+// them — every perspective link would dead-end at "Episode Not Found".
+// Generate them (`npm run generate-library`) and add 'perspective' back.
+export const AVAILABLE_CONTENT_TYPES: ContentType[] = ['overview', 'figure', 'moment'];
+
+export function isContentTypeAvailable(contentType: string | null | undefined): boolean {
+  return !!contentType && (AVAILABLE_CONTENT_TYPES as string[]).includes(contentType);
 }
 
 // An epoch is shown only if it still has at least one available empire.
@@ -65,10 +75,27 @@ export const AVAILABLE_CONTENT = {
   empires: AVAILABLE_EMPIRES.length,
   epochs: AVAILABLE_EPOCHS.length,
   overviews: AVAILABLE_EMPIRES.length,
-  figures: filterByAvailableEmpire(KEY_FIGURES).length,
-  moments: filterByAvailableEmpire(KEY_MOMENTS).length,
-  perspectives: filterByAvailableEmpire(PERSPECTIVES).length,
+  figures: isContentTypeAvailable('figure') ? filterByAvailableEmpire(KEY_FIGURES).length : 0,
+  moments: isContentTypeAvailable('moment') ? filterByAvailableEmpire(KEY_MOMENTS).length : 0,
+  perspectives: isContentTypeAvailable('perspective') ? filterByAvailableEmpire(PERSPECTIVES).length : 0,
 };
+
+// Per-empire chapter counts, used for card summaries and completion targets.
+// Reflects the content-type gate, so counts never promise chapters the user
+// can't actually open.
+export function getContentCountsForEmpire(empireId: EmpireId) {
+  return {
+    figures: isContentTypeAvailable('figure')
+      ? KEY_FIGURES.filter((f) => f.empire === empireId).length
+      : 0,
+    moments: isContentTypeAvailable('moment')
+      ? KEY_MOMENTS.filter((m) => m.empire === empireId).length
+      : 0,
+    perspectives: isContentTypeAvailable('perspective')
+      ? PERSPECTIVES.filter((p) => p.empire === empireId).length
+      : 0,
+  };
+}
 
 export const AVAILABLE_EPISODE_COUNT =
   AVAILABLE_CONTENT.overviews +

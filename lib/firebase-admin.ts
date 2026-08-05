@@ -1,4 +1,4 @@
-import { filterByAvailableEmpire, getAvailableEpochs, isEmpireAvailable } from '@/lib/availability';
+import { filterByAvailableEmpire, getAvailableEpochs, isContentTypeAvailable, isEmpireAvailable } from '@/lib/availability';
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getAuth, Auth } from 'firebase-admin/auth';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
@@ -208,6 +208,7 @@ export function getMoment(id: string): KeyMoment | undefined {
 // ============================================
 
 export function getPerspectives(empireId?: EmpireId): Perspective[] {
+  if (!isContentTypeAvailable('perspective')) return [];
   if (empireId) {
     return isEmpireAvailable(empireId) ? getPerspectivesByEmpire(empireId) : [];
   }

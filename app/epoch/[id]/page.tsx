@@ -1,19 +1,20 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { EPOCHS, EpochId, EmpireId, getEmpiresForEpoch } from '@/types';
-import { isEmpireAvailable, isEpochAvailable } from '@/lib/availability';
-import InteractiveMap from '@/app/components/InteractiveMap';
+import { getContentCountsForEmpire, isEmpireAvailable, isEpochAvailable } from '@/lib/availability';
 import EmpireCard from '@/app/components/EmpireCard';
+import { AppHeader } from '@/app/components/layout';
+import { useExplorerProgress } from '@/hooks/useExplorerProgress';
 
 export default function EpochPage({ params }: { params: { id: string } }) {
   const epochId = params.id as EpochId;
   const { user, loading, signOut } = useAuth();
+  const { profile } = useExplorerProgress(user?.uid || null);
   const router = useRouter();
-  const [selectedEmpire, setSelectedEmpire] = useState<EmpireId | null>(null);
 
   // An epoch with no available empires is treated as not found, so a stale
   // link or typed URL can't reach a page listing empires we don't ship.
@@ -29,11 +30,6 @@ export default function EpochPage({ params }: { params: { id: string } }) {
   const handleSignOut = async () => {
     await signOut();
     router.push('/login');
-  };
-
-  const handleSelectEmpire = (empireId: EmpireId) => {
-    setSelectedEmpire(empireId);
-    router.push(`/empire/${empireId}`);
   };
 
   if (loading) {
@@ -63,35 +59,7 @@ export default function EpochPage({ params }: { params: { id: string } }) {
 
   return (
     <div className="min-h-screen">
-      {/* Header */}
-      <header className="bg-parchment/80 backdrop-blur-sm border-b border-brass/10 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/dashboard" className="flex items-center gap-3 group">
-              <div className="w-10 h-10 rounded-full bg-brass flex items-center justify-center">
-                <svg className="w-5 h-5 text-parchment" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <h1 className="font-display text-2xl font-bold text-ink group-hover:text-sepia transition-colors">
-                Time Capsule FM
-              </h1>
-            </Link>
-            <nav className="flex items-center gap-6">
-              <Link href="/dashboard" className="nav-link">Explore</Link>
-              <Link href="/figures" className="nav-link">Figures</Link>
-              <Link href="/moments" className="nav-link">Moments</Link>
-              <Link href="/episodes" className="nav-link">My Journey</Link>
-              <div className="flex items-center gap-3 pl-4 border-l border-brass/20">
-                <Link href="/accolades" className="text-sm text-sepia-light hover:text-sepia transition-colors font-display">Profile</Link>
-                <button onClick={handleSignOut} className="text-sm text-sepia-light hover:text-sepia transition-colors font-display">
-                  Sign Out
-                </button>
-              </div>
-            </nav>
-          </div>
-        </div>
-      </header>
+      <AppHeader profile={profile} onSignOut={handleSignOut} />
 
       {/* Breadcrumb */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -111,22 +79,13 @@ export default function EpochPage({ params }: { params: { id: string } }) {
           <p className="text-sepia-light font-body max-w-3xl">{epoch.description}</p>
         </div>
 
-        {/* Interactive Map */}
-        <div className="card-antiquarian p-6 mb-8 opacity-0 animate-fade-in-up animate-stagger-1">
-          <h3 className="font-display text-xl font-bold text-ink mb-4">
-            Select an Empire
-          </h3>
-          <InteractiveMap
-            epochId={epochId}
-            selectedEmpire={selectedEmpire}
-            onSelectEmpire={handleSelectEmpire}
-          />
-        </div>
-
-        {/* Empire Grid */}
-        <div className="space-y-4 opacity-0 animate-fade-in-up animate-stagger-2">
+        {/* Empire Grid. The Leaflet map that used to sit above this was
+            removed: it rendered incorrectly at phone widths and drew its
+            territories straight from the GeoJSON, bypassing the availability
+            gate so hidden empires stayed tappable. */}
+        <div className="space-y-4 opacity-0 animate-fade-in-up animate-stagger-1">
           <h3 className="font-display text-xl font-bold text-ink">
-            All Empires in {epoch.name}
+            {empires.length === 1 ? 'Empire' : 'Empires'} in {epoch.name}
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {empires.map((empire) => (
@@ -138,11 +97,7 @@ export default function EpochPage({ params }: { params: { id: string } }) {
                 years={empire.years}
                 color={empire.color}
                 description={empire.description}
-                contentCounts={{
-                  figures: 2,
-                  moments: 3,
-                  perspectives: 3,
-                }}
+                contentCounts={getContentCountsForEmpire(empire.id as EmpireId)}
               />
             ))}
           </div>
