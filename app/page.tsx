@@ -4,6 +4,29 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import Link from 'next/link';
+import Image from 'next/image';
+import { SEASON } from '@/lib/availability';
+import DemoPlayer from '@/app/components/DemoPlayer';
+
+// Season 1's cast, pitched in one line each. Static copy on purpose: the
+// landing page should never promise more than the catalog delivers again.
+const SEASON_EMPIRES = [
+  {
+    id: 'ancient-egypt',
+    name: 'Ancient Egypt',
+    pitch: 'Three thousand years of pharaohs, pyramids, and a river that ran like clockwork.',
+  },
+  {
+    id: 'classical-greece',
+    name: 'Classical Greece',
+    pitch: 'Democracy, philosophy, and theatre — invented by people who argued about everything.',
+  },
+  {
+    id: 'roman-empire',
+    name: 'Roman Empire',
+    pitch: 'Aqueducts, legions, and an empire so vast its roads still shape your commute.',
+  },
+];
 
 export default function HomePage() {
   const { user, loading } = useAuth();
@@ -32,64 +55,45 @@ export default function HomePage() {
               <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
             </svg>
           </div>
-          <h1 className="hero-title mb-6 opacity-0 animate-fade-in-up animate-stagger-1">
+          <h1 className="hero-title mb-3 opacity-0 animate-fade-in-up animate-stagger-1">
             Time Capsule FM
           </h1>
+          <p className="font-display text-sm font-bold tracking-widest uppercase text-brass mb-5 opacity-0 animate-fade-in-up animate-stagger-1">
+            Season {SEASON.number} · {SEASON.title}
+          </p>
           <p className="hero-subtitle mb-8 max-w-3xl mx-auto opacity-0 animate-fade-in-up animate-stagger-2">
-            A guided audio journey through history. Explore ancient empires and revolutionary movements
-            through immersive, curated episodes.
+            {SEASON.tagline} Twenty-seven narrated chapters — empires, figures, pivotal
+            moments, and first-person perspectives — with quizzes, badges, and maps to
+            make it stick.
           </p>
 
+          <div className="mb-10 opacity-0 animate-fade-in-up animate-stagger-3">
+            <DemoPlayer />
+          </div>
+
           <div className="flex justify-center gap-4 mb-16 opacity-0 animate-fade-in-up animate-stagger-3">
-            <Link href="/login" className="btn-primary">
-              Sign In
+            <Link href="/signup" className="btn-primary">
+              Start Season 1 Free
             </Link>
-            <Link href="/signup" className="btn-secondary">
-              Create Account
+            <Link href="/login" className="btn-secondary">
+              Sign In
             </Link>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto opacity-0 animate-fade-in-up animate-stagger-4">
-            <div className="card-antiquarian text-left">
-              <div className="w-10 h-10 rounded-full bg-brass/20 flex items-center justify-center mb-3">
-                <span className="text-xl">🏺</span>
+          <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto opacity-0 animate-fade-in-up animate-stagger-4">
+            {SEASON_EMPIRES.map((empire) => (
+              <div key={empire.id} className="card-antiquarian text-left">
+                <Image
+                  src={`/empires/${empire.id}.png`}
+                  alt={empire.name}
+                  width={40}
+                  height={40}
+                  className="rounded-sm mb-3"
+                />
+                <h2 className="font-display text-lg font-bold text-ink mb-1">{empire.name}</h2>
+                <p className="text-sm text-sepia-light font-body">{empire.pitch}</p>
               </div>
-              <h2 className="font-display text-lg font-bold text-ink mb-1">Bronze Age Mediterranean</h2>
-              <p className="text-sm text-sepia-light font-body">
-                Explore Egypt, Mesopotamia, and the Aegean through pyramids,
-                ziggurats, and palace civilizations.
-              </p>
-            </div>
-            <div className="card-antiquarian text-left">
-              <div className="w-10 h-10 rounded-full bg-brass/20 flex items-center justify-center mb-3">
-                <span className="text-xl">🏛️</span>
-              </div>
-              <h2 className="font-display text-lg font-bold text-ink mb-1">Classical Antiquity</h2>
-              <p className="text-sm text-sepia-light font-body">
-                Witness Greek democracy, Persian grandeur, and the rise of
-                Rome through philosophers and warriors.
-              </p>
-            </div>
-            <div className="card-antiquarian text-left">
-              <div className="w-10 h-10 rounded-full bg-brass/20 flex items-center justify-center mb-3">
-                <span className="text-xl">⚔️</span>
-              </div>
-              <h2 className="font-display text-lg font-bold text-ink mb-1">Hellenistic & Roman World</h2>
-              <p className="text-sm text-sepia-light font-body">
-                Follow Alexander's legacy and Rome's dominion across three
-                continents with the Han Dynasty in the East.
-              </p>
-            </div>
-            <div className="card-antiquarian text-left">
-              <div className="w-10 h-10 rounded-full bg-brass/20 flex items-center justify-center mb-3">
-                <span className="text-xl">🗽</span>
-              </div>
-              <h2 className="font-display text-lg font-bold text-ink mb-1">Revolutionary Age</h2>
-              <p className="text-sm text-sepia-light font-body">
-                Experience the birth of nations and global empires from America
-                to Japan through revolutionaries and monarchs.
-              </p>
-            </div>
+            ))}
           </div>
 
           <div className="mt-16 opacity-0 animate-fade-in-up animate-stagger-5">

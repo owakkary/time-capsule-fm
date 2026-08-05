@@ -9,7 +9,7 @@ import {
   EPOCHS,
   EMPIRES,
 } from '@/types';
-import { isBadgeEarnable } from '@/lib/availability';
+import { AVAILABLE_CONTENT, isBadgeEarnable } from '@/lib/availability';
 
 // ============================================
 // BADGE DEFINITIONS
@@ -378,51 +378,55 @@ export const BADGES: BadgeDefinition[] = [
       return totalPerspectives >= 5;
     },
   },
+  // The three collection badges below target *all* of the season's content
+  // rather than fixed numbers, so they stay earnable however wide or narrow
+  // the availability gate is, and automatically get more demanding when new
+  // empires ship.
   {
     id: 'figure-finder',
     name: 'Figure Finder',
-    description: 'Discover 10 historical figures',
+    description: `Discover all ${AVAILABLE_CONTENT.figures} Season 1 figures`,
     icon: 'mask',
     category: 'special',
     rarity: 'uncommon',
-    targetProgress: 10,
+    targetProgress: AVAILABLE_CONTENT.figures,
     getProgress: (_, empires) => {
       return empires.reduce((total, ep) => total + ep.figuresDiscovered.length, 0);
     },
     checkUnlock: (_, empires) => {
       const totalFigures = empires.reduce((total, ep) => total + ep.figuresDiscovered.length, 0);
-      return totalFigures >= 10;
+      return totalFigures >= AVAILABLE_CONTENT.figures;
     },
   },
   {
     id: 'moment-maven',
     name: 'Moment Maven',
-    description: 'Discover 10 historical moments',
+    description: `Discover all ${AVAILABLE_CONTENT.moments} Season 1 moments`,
     icon: 'bolt',
     category: 'special',
     rarity: 'uncommon',
-    targetProgress: 10,
+    targetProgress: AVAILABLE_CONTENT.moments,
     getProgress: (_, empires) => {
       return empires.reduce((total, ep) => total + ep.momentsDiscovered.length, 0);
     },
     checkUnlock: (_, empires) => {
       const totalMoments = empires.reduce((total, ep) => total + ep.momentsDiscovered.length, 0);
-      return totalMoments >= 10;
+      return totalMoments >= AVAILABLE_CONTENT.moments;
     },
   },
   {
     id: 'overview-collector',
     name: 'Overview Collector',
-    description: 'Complete 5 empire overviews',
+    description: `Complete all ${AVAILABLE_CONTENT.overviews} Season 1 empire overviews`,
     icon: 'scroll',
     category: 'special',
     rarity: 'uncommon',
-    targetProgress: 5,
+    targetProgress: AVAILABLE_CONTENT.overviews,
     getProgress: (_, empires) => {
       return empires.filter(ep => ep.overviewCompleted).length;
     },
     checkUnlock: (_, empires) => {
-      return empires.filter(ep => ep.overviewCompleted).length >= 5;
+      return empires.filter(ep => ep.overviewCompleted).length >= AVAILABLE_CONTENT.overviews;
     },
   },
 ];

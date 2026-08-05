@@ -19,6 +19,15 @@ export const AVAILABLE_EMPIRES: EmpireId[] = [
   'roman-empire',
 ];
 
+// The product frame for the current allowlist: a bounded catalog presented as
+// a season, not a limitation. Copy should say "Season 1" wherever it would
+// otherwise have to apologize for scope.
+export const SEASON = {
+  number: 1,
+  title: 'The Ancient Mediterranean',
+  tagline: 'Egypt, Greece, and Rome — the three civilizations everything else answers to.',
+} as const;
+
 export function isEmpireAvailable(empireId: string | null | undefined): boolean {
   return !!empireId && (AVAILABLE_EMPIRES as string[]).includes(empireId);
 }
@@ -120,11 +129,13 @@ const BADGE_REQUIREMENTS: Record<string, BadgeRequirement> = {
   'monthly-master': { kind: 'unbounded' },
   'century-seeker': { kind: 'unbounded' },
 
-  // Special
+  // Special — the collection badges target all of the season's content
+  // (mirroring their definitions in lib/badges.ts), so they're earnable by
+  // construction at any allowlist width.
   'perspective-seeker': { kind: 'perspectives', n: 5 },
-  'figure-finder': { kind: 'figures', n: 10 },
-  'moment-maven': { kind: 'moments', n: 10 },
-  'overview-collector': { kind: 'overviews', n: 5 },
+  'figure-finder': { kind: 'figures', n: AVAILABLE_CONTENT.figures },
+  'moment-maven': { kind: 'moments', n: AVAILABLE_CONTENT.moments },
+  'overview-collector': { kind: 'overviews', n: AVAILABLE_CONTENT.overviews },
 };
 
 export function isBadgeEarnable(badgeId: string): boolean {

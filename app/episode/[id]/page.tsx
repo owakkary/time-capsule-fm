@@ -8,10 +8,12 @@ import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/useAuth';
 import { useEventLogger } from '@/hooks/useEventLogger';
 import { useExplorerProgress } from '@/hooks/useExplorerProgress';
-import { getEmpire, EPOCHS, ContentLibraryItem, EmpireId, EpochId, ContentType } from '@/types';
+import { getEmpire, EPOCHS, ContentLibraryItem, EmpireId, EpochId, ContentType, ProgressUpdateResult, Recommendation } from '@/types';
 import { getAudioProvider, getQuiz, hasQuiz } from '@/lib/content-library';
 import { isEmpireAvailable } from '@/lib/availability';
+import { getContentCatalog } from '@/lib/recommendations';
 import EpisodeQuiz from '@/app/components/EpisodeQuiz';
+import RewardSummary from '@/app/components/RewardSummary';
 
 // Average spoken pace used to estimate duration for browser-speech
 // episodes, which have no audio file to read a real duration from.
@@ -19,7 +21,7 @@ const WORDS_PER_MINUTE = 150;
 
 export default function EpisodePage({ params }: { params: { id: string } }) {
   const episodeId = params.id;
-  const { user, loading, signOut } = useAuth();
+  const { user, loading, signOut, getIdToken } = useAuth();
   const { logEvent } = useEventLogger();
   const { recordEpisodeGenerated, recordEpisodeCompleted } = useExplorerProgress(user?.uid || null);
   const router = useRouter();
@@ -30,6 +32,14 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const [showQuiz, setShowQuiz] = useState(false);
+  // Where a previous session left off, read from listeningHistory. Applied
+  // once when audio metadata loads; null once consumed or dismissed.
+  const [resumeFrom, setResumeFrom] = useState<number | null>(null);
+  const [playbackRate, setPlaybackRate] = useState(1);
+  // Set when the quiz is passed: what the completion earned, and what to
+  // listen to next — the warmest possible moment to offer another episode.
+  const [reward, setReward] = useState<ProgressUpdateResult | null>(null);
+  const [upNext, setUpNext] = useState<Recommendation | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   // Browser-speech (Web Speech API) playback state — used when the episode
@@ -134,6 +144,20 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
             return;
           }
           setEpisode(item);
+
+          // Pick up where the last session left off. Completed episodes
+          // restart from the top — resume is for interrupted listens only.
+          try {
+            const historySnap = await getDoc(doc(db, 'listeningHistory', `${user.uid}_${item.id}`));
+            if (historySnap.exists()) {
+              const h = historySnap.data();
+              if (!h.completed && typeof h.progressSeconds === 'number' && h.progressSeconds >= 30) {
+                setResumeFrom(h.progressSeconds);
+              }
+            }
+          } catch {
+            // Resume is a nicety; never block playback on it.
+          }
           if (getAudioProvider(item) === 'browser-speech') {
             setDuration(Math.round((item.wordCount / WORDS_PER_MINUTE) * 60));
           }
@@ -175,7 +199,53 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
     setShowQuiz(true);
   }, []);
 
-  const handleComplete = useCallback((completionPercentage: number) => {
+  // Best recommendation for "what next": the personalized engine when it has
+  // enough signal, otherwise another chapter from the same empire.
+  const fetchUpNext = useCallback(async () => {
+    let pick: Recommendation | null = null;
+    try {
+      const token = await getIdToken();
+      if (token) {
+        const res = await fetch('/api/recommend', { headers: { Authorization: `Bearer ${token}` } });
+        if (res.ok) {
+          const data = await res.json();
+          pick = (data.recommendations ?? []).find((r: Recommendation) => r.id !== episodeId) ?? null;
+        }
+      }
+    } catch {
+      // fall through to the catalog fallback
+    }
+
+    if (!pick && episode && db) {
+      const sameEmpire = getContentCatalog().filter(
+        (item) => item.empire === episode.empireId && item.id !== episodeId
+      );
+      const fallback = sameEmpire[Math.floor(Math.random() * sameEmpire.length)];
+      if (fallback) {
+        try {
+          const snap = await getDoc(doc(db, 'contentLibrary', fallback.id));
+          if (snap.exists()) {
+            pick = {
+              id: fallback.id,
+              empire: fallback.empire,
+              epoch: fallback.epoch,
+              contentType: fallback.contentType,
+              contentId: fallback.contentId,
+              title: snap.data().title,
+              hostPitch: 'The story does not stop here — there is more in this corner of the archive.',
+              reason: '',
+              confidence: 0.3,
+            };
+          }
+        } catch {
+          // no up-next is fine; the back link still works
+        }
+      }
+    }
+    setUpNext(pick);
+  }, [episodeId, episode, getIdToken]);
+
+  const handleComplete = useCallback(async (completionPercentage: number) => {
     if (hasCompletedRef.current || !episode) return;
     hasCompletedRef.current = true;
     logEvent({
@@ -183,9 +253,11 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
       ...getEventFields(),
       completionPercentage,
     });
-    recordEpisodeCompleted(episode.empireId as EmpireId);
     touchListeningHistory(episode, true);
-  }, [episode, recordEpisodeCompleted, touchListeningHistory, logEvent, getEventFields]);
+    fetchUpNext();
+    const result = await recordEpisodeCompleted(episode.empireId as EmpireId);
+    if (result) setReward(result);
+  }, [episode, recordEpisodeCompleted, touchListeningHistory, logEvent, getEventFields, fetchUpNext]);
 
   handleCompleteRef.current = handleComplete;
 
@@ -230,12 +302,12 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
       audioRef.current.pause();
     } else {
       audioRef.current.play();
-      onFirstPlay();
       if (hasFinishedListeningRef.current) {
         logEvent({ eventType: 'episode_replayed', ...getEventFields() });
       }
     }
-    setIsPlaying(!isPlaying);
+    // isPlaying state follows the element's onPlay/onPause events, which also
+    // covers playback driven from the lock screen via Media Session.
   };
 
   const toggleSpeechPlay = () => {
@@ -311,13 +383,87 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
 
   const handleLoadedMetadata = () => {
     if (!audioRef.current) return;
-    setDuration(audioRef.current.duration);
-    durationRef.current = audioRef.current.duration;
+    const dur = audioRef.current.duration;
+    setDuration(dur);
+    durationRef.current = dur;
+    audioRef.current.playbackRate = playbackRate;
+
+    // Apply the saved position, unless it's so close to the end that
+    // resuming would just dump the user at the quiz.
+    if (resumeFrom !== null && resumeFrom < dur * 0.9) {
+      audioRef.current.currentTime = resumeFrom;
+      setProgress(resumeFrom);
+      progressRef.current = resumeFrom;
+    }
   };
 
   useEffect(() => {
     durationRef.current = duration;
   }, [duration]);
+
+  // Persist position every 20s while playing (and on pause via togglePlay),
+  // so leaving mid-episode never costs more than ~20 seconds of progress.
+  useEffect(() => {
+    if (!isPlaying || !episode || hasCompletedRef.current) return;
+    const interval = setInterval(() => {
+      if (!hasCompletedRef.current) {
+        touchListeningHistory(episode, false);
+      }
+    }, 20000);
+    return () => clearInterval(interval);
+  }, [isPlaying, episode, touchListeningHistory]);
+
+  // Lock-screen / control-center integration. Without this the Capacitor
+  // shell and mobile browsers show a blank player and drop AirPods taps.
+  useEffect(() => {
+    if (!episode || typeof navigator === 'undefined' || !('mediaSession' in navigator)) return;
+
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: episode.title,
+      artist: 'Time Capsule FM',
+      album: getEmpire(episode.empireId)?.name ?? 'Time Capsule FM',
+      artwork: [{ src: `/empires/${episode.empireId}.png`, sizes: '512x512', type: 'image/png' }],
+    });
+
+    const audio = audioRef.current;
+    const seekBy = (delta: number) => {
+      if (!audio) return;
+      audio.currentTime = Math.min(Math.max(audio.currentTime + delta, 0), audio.duration || Infinity);
+    };
+    navigator.mediaSession.setActionHandler('play', () => audio?.play());
+    navigator.mediaSession.setActionHandler('pause', () => audio?.pause());
+    navigator.mediaSession.setActionHandler('seekbackward', () => seekBy(-15));
+    navigator.mediaSession.setActionHandler('seekforward', () => seekBy(15));
+    navigator.mediaSession.setActionHandler('seekto', (details) => {
+      if (audio && details.seekTime !== undefined) audio.currentTime = details.seekTime;
+    });
+
+    return () => {
+      navigator.mediaSession.metadata = null;
+      for (const action of ['play', 'pause', 'seekbackward', 'seekforward', 'seekto'] as MediaSessionAction[]) {
+        try {
+          navigator.mediaSession.setActionHandler(action, null);
+        } catch {
+          // Older browsers throw on unknown actions; nothing to clean up there.
+        }
+      }
+    };
+  }, [episode]);
+
+  const skipBy = (delta: number) => {
+    if (!audioRef.current) return;
+    const next = Math.min(Math.max(audioRef.current.currentTime + delta, 0), audioRef.current.duration || Infinity);
+    audioRef.current.currentTime = next;
+    setProgress(next);
+    progressRef.current = next;
+  };
+
+  const PLAYBACK_RATES = [0.75, 1, 1.25, 1.5, 2];
+  const cyclePlaybackRate = () => {
+    const next = PLAYBACK_RATES[(PLAYBACK_RATES.indexOf(playbackRate) + 1) % PLAYBACK_RATES.length];
+    setPlaybackRate(next);
+    if (audioRef.current) audioRef.current.playbackRate = next;
+  };
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (usesBrowserSpeech) return; // seeking isn't supported for Web Speech playback
@@ -430,6 +576,18 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
                 src={episode.audioUrl ?? undefined}
                 onTimeUpdate={handleTimeUpdate}
                 onLoadedMetadata={handleLoadedMetadata}
+                onPlay={() => {
+                  // Media Session / lock-screen controls drive the element
+                  // directly, so React state follows the element, not clicks.
+                  setIsPlaying(true);
+                  onFirstPlay();
+                }}
+                onPause={() => {
+                  setIsPlaying(false);
+                  if (hasStartedRef.current && !hasCompletedRef.current) {
+                    touchListeningHistory(episode, false);
+                  }
+                }}
                 onEnded={() => {
                   setIsPlaying(false);
                   handleEpisodeEnd();
@@ -437,7 +595,34 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
               />
             )}
 
+            {resumeFrom !== null && progress > 0 && progress < duration * 0.9 && !isPlaying && !hasStartedRef.current && (
+              <div className="mb-4 flex items-center gap-3 text-sm font-body text-sepia">
+                <span>Resuming from {formatTime(resumeFrom)}</span>
+                <button
+                  onClick={() => {
+                    if (audioRef.current) audioRef.current.currentTime = 0;
+                    setProgress(0);
+                    progressRef.current = 0;
+                    setResumeFrom(null);
+                  }}
+                  className="text-brass hover:text-brass-dark font-display transition-colors"
+                >
+                  Start over
+                </button>
+              </div>
+            )}
+
             <div className="flex items-center gap-4">
+              {!isBrowserSpeech && (
+                <button
+                  onClick={() => skipBy(-15)}
+                  aria-label="Back 15 seconds"
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-sepia hover:text-ink hover:bg-parchment-dark transition-colors font-display text-xs font-bold"
+                >
+                  −15
+                </button>
+              )}
+
               <button
                 onClick={togglePlay}
                 className="w-14 h-14 rounded-full flex items-center justify-center text-parchment bg-brass shadow-lg hover:bg-brass-dark transition-colors"
@@ -453,6 +638,16 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
                 )}
               </button>
 
+              {!isBrowserSpeech && (
+                <button
+                  onClick={() => skipBy(15)}
+                  aria-label="Forward 15 seconds"
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-sepia hover:text-ink hover:bg-parchment-dark transition-colors font-display text-xs font-bold"
+                >
+                  +15
+                </button>
+              )}
+
               <div className="flex-1">
                 <input
                   type="range"
@@ -466,8 +661,17 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
                     background: `linear-gradient(to right, var(--color-brass) ${(progress / (duration || 1)) * 100}%, var(--color-parchment-dark) ${(progress / (duration || 1)) * 100}%)`,
                   }}
                 />
-                <div className="flex justify-between text-sm text-sepia-light font-body mt-1">
+                <div className="flex justify-between items-center text-sm text-sepia-light font-body mt-1">
                   <span>{formatTime(progress)}</span>
+                  {!isBrowserSpeech && (
+                    <button
+                      onClick={cyclePlaybackRate}
+                      aria-label="Playback speed"
+                      className="font-display text-xs font-bold text-sepia hover:text-ink px-2 py-0.5 rounded-sm border border-brass/30 hover:border-brass transition-colors"
+                    >
+                      {playbackRate}×
+                    </button>
+                  )}
                   <span>{formatTime(duration)}</span>
                 </div>
               </div>
@@ -487,6 +691,32 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
             Items with no quiz are completed by handleEpisodeEnd instead. */}
         {showQuiz && hasQuiz(episode) && (
           <EpisodeQuiz quiz={getQuiz(episode)} onPass={handleQuizPass} onFail={handleQuizFail} />
+        )}
+
+        {/* What the completion earned — shown the moment it lands */}
+        {reward && <RewardSummary reward={reward} />}
+
+        {/* Up next — offered while the listener is warmest */}
+        {reward && upNext && (
+          <div className="card-antiquarian p-6 animate-fade-in-up">
+            <p className="font-display text-xs font-bold tracking-widest uppercase text-sepia-light mb-3">
+              Up Next
+            </p>
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="min-w-0">
+                <div className="mb-1.5">
+                  <span className="tag-empire text-xs">{getEmpire(upNext.empire)?.name ?? upNext.empire}</span>
+                </div>
+                <h3 className="font-display text-lg font-bold text-ink leading-snug">{upNext.title}</h3>
+                {upNext.hostPitch && (
+                  <p className="font-body text-sm text-sepia-light italic mt-1.5">&ldquo;{upNext.hostPitch}&rdquo;</p>
+                )}
+              </div>
+              <Link href={`/episode/${upNext.id}`} className="btn-primary !px-6 !py-2.5 shrink-0">
+                Play
+              </Link>
+            </div>
+          </div>
         )}
 
         {/* Back link */}

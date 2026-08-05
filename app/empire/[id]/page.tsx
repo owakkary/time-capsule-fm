@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/useAuth';
 import { EMPIRES, EmpireId, EPOCHS } from '@/types';
 import { isEmpireAvailable } from '@/lib/availability';
@@ -29,6 +31,34 @@ export default function EmpirePage({ params }: { params: { id: string } }) {
   const perspectives = getPerspectivesByEmpire(empireId);
   const overview = getOverviewByEmpire(empireId);
   const overviewEpisodeId = getContentLibraryItemId('overview', empireId);
+
+  // Chapters completed here, out of everything this empire offers. At Season 1
+  // scale (9-10 chapters per empire) full collection is genuinely achievable,
+  // which is exactly what makes showing the count worthwhile.
+  const totalChapters = 1 + figures.length + moments.length + perspectives.length;
+  const [completedChapters, setCompletedChapters] = useState<number | null>(null);
+
+  useEffect(() => {
+    async function fetchCompleted() {
+      if (!user || !db || !empire) return;
+      try {
+        const q = query(
+          collection(db, 'listeningHistory'),
+          where('userId', '==', user.uid),
+          where('empireId', '==', empireId),
+          where('completed', '==', true)
+        );
+        const snap = await getDocs(q);
+        const ids = new Set<string>();
+        snap.forEach((d) => ids.add(d.data().episodeId));
+        setCompletedChapters(ids.size);
+      } catch {
+        // Progress display is optional; the page works without it.
+      }
+    }
+    fetchCompleted();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, empireId]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -118,6 +148,22 @@ export default function EmpirePage({ params }: { params: { id: string } }) {
               <h2 className="hero-title mb-1">{empire.name}</h2>
               <p className="text-lg text-sepia font-body">{empire.years}</p>
               <p className="text-sepia-light font-body max-w-2xl mt-2">{empire.description}</p>
+
+              {completedChapters !== null && (
+                <div className="flex items-center gap-3 mt-4">
+                  <div className="w-40 h-2 bg-parchment rounded-sm overflow-hidden border border-brass/20">
+                    <div
+                      className="h-full bg-brass transition-[width] duration-700"
+                      style={{ width: `${Math.min((completedChapters / totalChapters) * 100, 100)}%` }}
+                    />
+                  </div>
+                  <span className="font-display text-sm font-bold text-sepia">
+                    {completedChapters >= totalChapters
+                      ? `All ${totalChapters} chapters collected`
+                      : `${completedChapters} of ${totalChapters} chapters`}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>

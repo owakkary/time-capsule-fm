@@ -98,13 +98,19 @@ export default function EpisodeQuiz({ quiz, onPass, onFail }: EpisodeQuizProps) 
   }
 
   if (finished && passed) {
+    const perfect = correctCount === quiz.length;
     return (
       <div className="card-antiquarian p-8 text-center animate-fade-in-up">
+        <p className="font-display text-xs font-bold tracking-widest uppercase text-brass mb-2">
+          {perfect ? 'Sage' : 'Scholar'}
+        </p>
         <h3 className="font-display text-2xl font-bold text-ink mb-2">
-          {correctCount}/{quiz.length} — Nailed it
+          {correctCount}/{quiz.length} — {perfect ? 'A flawless record' : 'Well studied'}
         </h3>
         <p className="font-body text-sepia">
-          XP and badge progress for this episode are unlocked.
+          {perfect
+            ? 'Every question, first try. The archive keeps note of such things.'
+            : 'Chapter complete — your rewards are below.'}
         </p>
       </div>
     );

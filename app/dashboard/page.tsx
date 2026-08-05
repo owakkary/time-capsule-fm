@@ -6,12 +6,14 @@ import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useExplorerProgress } from '@/hooks/useExplorerProgress';
 import { EpochId } from '@/types';
-import { getAvailableEpochs } from '@/lib/availability';
+import { getAvailableEpochs, SEASON } from '@/lib/availability';
 import EpochCard from '@/app/components/EpochCard';
 import HistoricalMap from '@/app/components/HistoricalMap';
 import { ExplorerCard } from '@/app/components/accolades';
 import { AppHeader } from '@/app/components/layout';
 import PersonalizedHome from '@/app/components/PersonalizedHome';
+import ContinueListening from '@/app/components/ContinueListening';
+import DailyDig from '@/app/components/DailyDig';
 
 export default function DashboardPage() {
   const { user, loading, signOut } = useAuth();
@@ -26,6 +28,7 @@ export default function DashboardPage() {
     profile,
     badges,
     loading: progressLoading,
+    awardXP,
   } = useExplorerProgress(user?.uid || null);
 
   useEffect(() => {
@@ -72,11 +75,25 @@ export default function DashboardPage() {
           </div>
         )}
 
+        {/* The comeback loop: resume what was interrupted, then the daily
+            review — both above the fold, before any browsing UI */}
+        {!selectedEpoch && user && (
+          <>
+            <ContinueListening userId={user.uid} />
+            <DailyDig userId={user.uid} onComplete={awardXP} />
+          </>
+        )}
+
         {/* Personalized Recommendations - show when no epoch selected */}
         {!selectedEpoch && <PersonalizedHome />}
 
         {/* Hero - always visible but compact when map is shown */}
         <div className={`text-center mb-8 opacity-0 animate-fade-in-up transition-all duration-500 ${selectedEpoch ? 'mb-6' : 'mb-8'}`}>
+          {!selectedEpoch && (
+            <p className="font-display text-xs font-bold tracking-widest uppercase text-brass mb-2">
+              Season {SEASON.number} · {SEASON.title}
+            </p>
+          )}
           <h2 className={`font-display font-bold text-ink tracking-tight transition-all duration-500 ${selectedEpoch ? 'text-3xl md:text-4xl' : 'text-4xl md:text-5xl'}`}>
             Your Personal History Journey
           </h2>
