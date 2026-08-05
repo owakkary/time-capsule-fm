@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { EPOCHS, EpochId, EmpireId, getEmpiresForEpoch } from '@/types';
+import { isEmpireAvailable, isEpochAvailable } from '@/lib/availability';
 import InteractiveMap from '@/app/components/InteractiveMap';
 import EmpireCard from '@/app/components/EmpireCard';
 
@@ -14,8 +15,10 @@ export default function EpochPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const [selectedEmpire, setSelectedEmpire] = useState<EmpireId | null>(null);
 
-  const epoch = EPOCHS.find(e => e.id === epochId);
-  const empires = getEmpiresForEpoch(epochId);
+  // An epoch with no available empires is treated as not found, so a stale
+  // link or typed URL can't reach a page listing empires we don't ship.
+  const epoch = isEpochAvailable(epochId) ? EPOCHS.find(e => e.id === epochId) : undefined;
+  const empires = getEmpiresForEpoch(epochId).filter(e => isEmpireAvailable(e.id));
 
   useEffect(() => {
     if (!loading && !user) {

@@ -7,7 +7,8 @@ import { collection, query, where, orderBy, limit, getDocs } from 'firebase/fire
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/useAuth';
 import { useExplorerProgress } from '@/hooks/useExplorerProgress';
-import { getEmpire, EPOCHS, ListeningHistory } from '@/types';
+import { getEmpire, ListeningHistory } from '@/types';
+import { getAvailableEpochs, isEmpireAvailable } from '@/lib/availability';
 import { AppHeader } from '@/app/components/layout';
 
 export default function EpisodesPage() {
@@ -59,7 +60,11 @@ export default function EpisodesPage() {
     router.push('/login');
   };
 
-  const filteredHistory = history.filter((h) => {
+  // Hide plays from empires that are no longer offered — their episode pages
+  // now resolve to "not found", so listing them would be a dead link.
+  const availableHistory = history.filter((h) => isEmpireAvailable(h.empireId));
+
+  const filteredHistory = availableHistory.filter((h) => {
     if (filter === 'all') return true;
     return h.epochId === filter || h.empireId === filter;
   });
@@ -93,7 +98,7 @@ export default function EpisodesPage() {
         <div className="flex items-center justify-between mb-10 opacity-0 animate-fade-in-up">
           <div>
             <h2 className="hero-title mb-2">My Journey</h2>
-            <p className="text-sepia-light font-body">{history.length} chapters explored</p>
+            <p className="text-sepia-light font-body">{availableHistory.length} chapters explored</p>
           </div>
 
           {/* Filter */}
@@ -103,7 +108,7 @@ export default function EpisodesPage() {
             className="input max-w-xs"
           >
             <option value="all">All Epochs</option>
-            {EPOCHS.map((epoch) => (
+            {getAvailableEpochs().map((epoch) => (
               <option key={epoch.id} value={epoch.id}>{epoch.name}</option>
             ))}
           </select>

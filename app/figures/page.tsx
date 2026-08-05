@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useExplorerProgress } from '@/hooks/useExplorerProgress';
 import { KEY_FIGURES } from '@/lib/seed-data/figures';
 import { EPOCHS, getEmpire, EmpireId } from '@/types';
+import { filterByAvailableEmpire, getAvailableEpochs, isEmpireAvailable } from '@/lib/availability';
 import FigureCard from '@/app/components/FigureCard';
 import { AppHeader } from '@/app/components/layout';
 
@@ -42,7 +43,7 @@ export default function FiguresPage() {
   }
 
   // Filter figures based on selection
-  let filteredFigures = KEY_FIGURES;
+  let filteredFigures = filterByAvailableEmpire(KEY_FIGURES);
   if (selectedEmpire) {
     filteredFigures = filteredFigures.filter(f => f.empire === selectedEmpire);
   } else if (selectedEpoch) {
@@ -75,7 +76,7 @@ export default function FiguresPage() {
           >
             All Figures
           </button>
-          {EPOCHS.map(epoch => (
+          {getAvailableEpochs().map(epoch => (
             <button
               key={epoch.id}
               onClick={() => { setSelectedEpoch(epoch.id); setSelectedEmpire(null); }}
@@ -93,7 +94,7 @@ export default function FiguresPage() {
         {/* Empire sub-filters */}
         {selectedEpoch && (
           <div className="mb-8 flex flex-wrap gap-2 opacity-0 animate-fade-in-up">
-            {EPOCHS.find(e => e.id === selectedEpoch)?.empires.map(empireId => {
+            {EPOCHS.find(e => e.id === selectedEpoch)?.empires.filter(isEmpireAvailable).map(empireId => {
               const empire = getEmpire(empireId);
               return empire ? (
                 <button

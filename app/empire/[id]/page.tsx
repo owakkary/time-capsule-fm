@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { EMPIRES, EmpireId, EPOCHS } from '@/types';
+import { isEmpireAvailable } from '@/lib/availability';
 import { getFiguresByEmpire } from '@/lib/seed-data/figures';
 import { getMomentsByEmpire } from '@/lib/seed-data/moments';
 import { getPerspectivesByEmpire } from '@/lib/seed-data/perspectives';
@@ -19,7 +20,9 @@ export default function EmpirePage({ params }: { params: { id: string } }) {
   const { user, loading, signOut } = useAuth();
   const router = useRouter();
 
-  const empire = EMPIRES.find(e => e.id === empireId);
+  // Unavailable empires render as "not found" rather than showing episodes
+  // that have no real narration behind them.
+  const empire = isEmpireAvailable(empireId) ? EMPIRES.find(e => e.id === empireId) : undefined;
   const epoch = empire ? EPOCHS.find(e => e.id === empire.epochId) : null;
   const figures = getFiguresByEmpire(empireId);
   const moments = getMomentsByEmpire(empireId);

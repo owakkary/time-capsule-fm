@@ -1,4 +1,5 @@
 import { EpochId, EmpireId, TerrainFeature, TerrainType, GeoFeatureCollection } from '@/types';
+import { isEmpireAvailable } from '@/lib/availability';
 
 // Cache for loaded GeoJSON data
 const geoDataCache: Map<string, GeoFeatureCollection> = new Map();
@@ -115,7 +116,11 @@ export async function loadTerrainFeatures(epochId: EpochId): Promise<TerrainData
 }
 
 /**
- * Extracts empire features from GeoJSON data
+ * Extracts empire features from GeoJSON data.
+ *
+ * Territories for empires the app doesn't currently offer are dropped here —
+ * this is the one choke point every map component draws through, so filtering
+ * once keeps hidden empires off the map, its labels, and its legend.
  */
 export function getEmpireFeatures(
   geoData: GeoFeatureCollection,
@@ -126,6 +131,7 @@ export function getEmpireFeatures(
   return features.filter((feature) => {
     const props = feature.properties;
     if (props?.type !== 'empire') return false;
+    if (!isEmpireAvailable(props?.id)) return false;
     if (empireId && props?.id !== empireId) return false;
     return true;
   });

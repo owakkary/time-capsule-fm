@@ -9,6 +9,7 @@ import {
   EPOCHS,
   EMPIRES,
 } from '@/types';
+import { isBadgeEarnable } from '@/lib/availability';
 
 // ============================================
 // BADGE DEFINITIONS
@@ -431,7 +432,17 @@ export const BADGES: BadgeDefinition[] = [
 // ============================================
 
 /**
- * Get badge by ID
+ * Badges a user can actually earn with the empires currently available.
+ * BADGES stays the complete definition list — this is what the UI shows, so
+ * nobody is left staring at a badge that no amount of listening can unlock
+ * (e.g. "Master the Persian Empire" while Persia is hidden). Widening
+ * AVAILABLE_EMPIRES brings the corresponding badges back automatically.
+ */
+export const EARNABLE_BADGES: BadgeDefinition[] = BADGES.filter(b => isBadgeEarnable(b.id));
+
+/**
+ * Get badge by ID — searches every definition, including ones not currently
+ * earnable, so a badge earned before the allowlist narrowed still renders.
  */
 export function getBadgeById(badgeId: string): BadgeDefinition | undefined {
   return BADGES.find(b => b.id === badgeId);
@@ -441,14 +452,14 @@ export function getBadgeById(badgeId: string): BadgeDefinition | undefined {
  * Get badges by category
  */
 export function getBadgesByCategory(category: BadgeCategory): BadgeDefinition[] {
-  return BADGES.filter(b => b.category === category);
+  return EARNABLE_BADGES.filter(b => b.category === category);
 }
 
 /**
  * Get badges by rarity
  */
 export function getBadgesByRarity(rarity: BadgeRarity): BadgeDefinition[] {
-  return BADGES.filter(b => b.rarity === rarity);
+  return EARNABLE_BADGES.filter(b => b.rarity === rarity);
 }
 
 /**
@@ -462,7 +473,7 @@ export function checkBadgeUnlocks(
 ): BadgeDefinition[] {
   const newlyUnlocked: BadgeDefinition[] = [];
 
-  for (const badge of BADGES) {
+  for (const badge of EARNABLE_BADGES) {
     const earned = currentBadges.find(eb => eb.badgeId === badge.id);
 
     // Skip if already unlocked
@@ -555,8 +566,9 @@ export function getRarityColors(rarity: BadgeRarity): {
 }
 
 /**
- * Get all badge IDs
+ * Get all badge IDs worth tracking. Scoped to earnable badges so we don't
+ * seed per-user progress documents for badges the UI never shows.
  */
 export function getAllBadgeIds(): string[] {
-  return BADGES.map(b => b.id);
+  return EARNABLE_BADGES.map(b => b.id);
 }

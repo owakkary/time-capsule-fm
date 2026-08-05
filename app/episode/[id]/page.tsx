@@ -10,6 +10,7 @@ import { useEventLogger } from '@/hooks/useEventLogger';
 import { useExplorerProgress } from '@/hooks/useExplorerProgress';
 import { getEmpire, EPOCHS, ContentLibraryItem, EmpireId, EpochId, ContentType } from '@/types';
 import { getAudioProvider, getQuiz, hasQuiz } from '@/lib/content-library';
+import { isEmpireAvailable } from '@/lib/availability';
 import EpisodeQuiz from '@/app/components/EpisodeQuiz';
 
 // Average spoken pace used to estimate duration for browser-speech
@@ -126,6 +127,12 @@ export default function EpisodePage({ params }: { params: { id: string } }) {
             ...data,
             createdAt: data.createdAt?.toDate?.() || new Date(),
           } as ContentLibraryItem;
+          // The library holds episodes for empires the UI doesn't offer yet;
+          // don't play one just because someone has the direct link.
+          if (!isEmpireAvailable(item.empireId)) {
+            setNotFound(true);
+            return;
+          }
           setEpisode(item);
           if (getAudioProvider(item) === 'browser-speech') {
             setDuration(Math.round((item.wordCount / WORDS_PER_MINUTE) * 60));

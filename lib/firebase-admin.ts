@@ -1,3 +1,4 @@
+import { filterByAvailableEmpire, getAvailableEpochs, isEmpireAvailable } from '@/lib/availability';
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getAuth, Auth } from 'firebase-admin/auth';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
@@ -117,12 +118,17 @@ export async function verifyAuthToken(authHeader: string | null) {
 // EPOCH FUNCTIONS
 // ============================================
 
+// Every catalog reader below is scoped to the available empires, so the API
+// can't hand out content the UI deliberately hides.
 export function getEpochs() {
-  return EPOCHS.map(epoch => ({
-    ...epoch,
-    empireCount: epoch.empires.length,
-    empiresList: getEmpiresForEpoch(epoch.id as EpochId),
-  }));
+  return getAvailableEpochs().map(epoch => {
+    const empiresList = getEmpiresForEpoch(epoch.id as EpochId).filter(e => isEmpireAvailable(e.id));
+    return {
+      ...epoch,
+      empireCount: empiresList.length,
+      empiresList,
+    };
+  });
 }
 
 export function getEpochById(epochId: EpochId) {
@@ -141,10 +147,11 @@ export function getEpochById(epochId: EpochId) {
 // ============================================
 
 export function getEmpires(epochId?: EpochId) {
+  const available = EMPIRES.filter(e => isEmpireAvailable(e.id));
   if (epochId) {
-    return EMPIRES.filter(e => e.epochId === epochId);
+    return available.filter(e => e.epochId === epochId);
   }
-  return [...EMPIRES];
+  return available;
 }
 
 export function getEmpireById(empireId: EmpireId) {
@@ -172,9 +179,9 @@ export function getEmpireById(empireId: EmpireId) {
 
 export function getFigures(empireId?: EmpireId): KeyFigure[] {
   if (empireId) {
-    return getFiguresByEmpire(empireId);
+    return isEmpireAvailable(empireId) ? getFiguresByEmpire(empireId) : [];
   }
-  return [...KEY_FIGURES];
+  return filterByAvailableEmpire(KEY_FIGURES);
 }
 
 export function getFigure(id: string): KeyFigure | undefined {
@@ -187,9 +194,9 @@ export function getFigure(id: string): KeyFigure | undefined {
 
 export function getMoments(empireId?: EmpireId): KeyMoment[] {
   if (empireId) {
-    return getMomentsByEmpire(empireId);
+    return isEmpireAvailable(empireId) ? getMomentsByEmpire(empireId) : [];
   }
-  return [...KEY_MOMENTS];
+  return filterByAvailableEmpire(KEY_MOMENTS);
 }
 
 export function getMoment(id: string): KeyMoment | undefined {
@@ -202,9 +209,9 @@ export function getMoment(id: string): KeyMoment | undefined {
 
 export function getPerspectives(empireId?: EmpireId): Perspective[] {
   if (empireId) {
-    return getPerspectivesByEmpire(empireId);
+    return isEmpireAvailable(empireId) ? getPerspectivesByEmpire(empireId) : [];
   }
-  return [...PERSPECTIVES];
+  return filterByAvailableEmpire(PERSPECTIVES);
 }
 
 export function getPerspective(id: string): Perspective | undefined {

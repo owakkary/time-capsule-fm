@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useExplorerProgress } from '@/hooks/useExplorerProgress';
-import { EPOCHS, EpochId } from '@/types';
+import { EpochId } from '@/types';
+import { getAvailableEpochs } from '@/lib/availability';
 import EpochCard from '@/app/components/EpochCard';
 import HistoricalMap from '@/app/components/HistoricalMap';
 import { ExplorerCard } from '@/app/components/accolades';
@@ -16,6 +17,9 @@ export default function DashboardPage() {
   const { user, loading, signOut } = useAuth();
   const router = useRouter();
   const [selectedEpoch, setSelectedEpoch] = useState<EpochId | null>(null);
+
+  // Only epochs that still contain an available empire are offered.
+  const visibleEpochs = getAvailableEpochs();
 
   // Explorer progression
   const {
@@ -88,7 +92,7 @@ export default function DashboardPage() {
           {selectedEpoch ? (
             // Compact epoch selector - 2x2 grid for 4 eras
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-4xl mx-auto opacity-0 animate-fade-in-up">
-              {EPOCHS.map((epoch) => (
+              {visibleEpochs.map((epoch) => (
                 <div key={epoch.id}>
                   <EpochCard
                     id={epoch.id}
@@ -113,7 +117,7 @@ export default function DashboardPage() {
 
               {/* Epoch Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-                {EPOCHS.map((epoch, index) => (
+                {visibleEpochs.map((epoch, index) => (
                   <div
                     key={epoch.id}
                     className="opacity-0 animate-fade-in-up"

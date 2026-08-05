@@ -123,6 +123,23 @@ npm run backfill-library         # repair in place
 
 **Long runs:** a full `generate-library` run takes ~2.5h and is killed if its parent shell dies. Launch it detached (`nohup npm run generate-library >> /tmp/gen.log 2>&1 & disown`) so a closing terminal or session can't take it down mid-run.
 
+## Empire Availability Gate
+
+Only the empires in `AVAILABLE_EMPIRES` (`lib/availability.ts`) are shown: **Ancient Egypt, Classical Greece, Roman Empire**. They're the only ones with real ElevenLabs narration — the other 18 would fall back to the browser's robotic Web Speech voice, which oversells them as finished content.
+
+This is a gate, not a deletion. Seed data and generated episodes for the other empires stay in place; widening the app is a one-line change to that array. `scripts/generate-content-library.ts` imports the same list for `FULL_AUDIO_EMPIRES`, so "has narration" and "is visible" can't drift apart.
+
+What it filters, all derived from that one array:
+
+- **Epochs** — an epoch is shown only if it still has an available empire, so the **Revolutionary Age is hidden entirely** (it has none). 4 epochs → 3.
+- **Pages** — `/empire/[id]`, `/epoch/[id]`, `/figure/[id]`, `/moment/[id]`, `/perspective/[id]`, and `/episode/[id]` resolve to "not found" for hidden empires, so direct links can't reach them.
+- **Lists** — `/figures`, `/moments`, and My Journey history filter by available empire.
+- **Maps** — `getEmpireFeatures()` in `app/utils/geoData.ts` drops hidden territories; it's the single choke point every map draws through, covering territories, labels, and legend.
+- **API + recommendations** — the catalog readers in `lib/firebase-admin.ts` and `getContentCatalog()` are scoped, so nothing recommends an episode the UI won't open.
+- **Badges** — `EARNABLE_BADGES` hides badges that can't be earned under the current gate (**12 of 27 visible**). Earnability is computed from `BADGE_REQUIREMENTS` against real content counts, so it re-derives automatically when the allowlist changes. `getBadgeById()` still searches all definitions so a previously earned badge keeps rendering.
+
+Reachable content is **27 of 189 episodes** (3 overviews, 6 figures, 9 moments, 9 perspectives). Run `npx tsx scripts/verify-availability.ts` to print exactly what's exposed and which badges dropped out.
+
 ## Data Model
 
 ### Firestore Structure

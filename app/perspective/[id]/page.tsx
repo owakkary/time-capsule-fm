@@ -7,13 +7,17 @@ import { useAuth } from '@/hooks/useAuth';
 import { EPOCHS, getEmpire } from '@/types';
 import { getPerspectiveById } from '@/lib/seed-data/perspectives';
 import { getContentLibraryItemId } from '@/lib/content-library';
+import { isEmpireAvailable } from '@/lib/availability';
 
 export default function PerspectivePage({ params }: { params: { id: string } }) {
   const perspectiveId = params.id;
   const { user, loading, signOut } = useAuth();
   const router = useRouter();
 
-  const perspective = getPerspectiveById(perspectiveId);
+  // Resolves to "not found" when the perspective belongs to a hidden empire,
+  // so a direct link can't reach content the rest of the UI doesn't offer.
+  const perspectiveRecord = getPerspectiveById(perspectiveId);
+  const perspective = perspectiveRecord && isEmpireAvailable(perspectiveRecord.empire) ? perspectiveRecord : undefined;
   const empire = perspective ? getEmpire(perspective.empire) : null;
   const epoch = empire ? EPOCHS.find(e => e.id === empire.epochId) : null;
   const episodeId = perspective ? getContentLibraryItemId('perspective', perspective.empire, perspectiveId) : null;

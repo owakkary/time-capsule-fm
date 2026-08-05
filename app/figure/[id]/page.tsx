@@ -7,13 +7,17 @@ import { useAuth } from '@/hooks/useAuth';
 import { EPOCHS, getEmpire } from '@/types';
 import { getFigureById } from '@/lib/seed-data/figures';
 import { getContentLibraryItemId } from '@/lib/content-library';
+import { isEmpireAvailable } from '@/lib/availability';
 
 export default function FigurePage({ params }: { params: { id: string } }) {
   const figureId = params.id;
   const { user, loading, signOut } = useAuth();
   const router = useRouter();
 
-  const figure = getFigureById(figureId);
+  // Resolves to "not found" when the figure belongs to a hidden empire, so a
+  // direct link can't reach content the rest of the UI doesn't offer.
+  const figureRecord = getFigureById(figureId);
+  const figure = figureRecord && isEmpireAvailable(figureRecord.empire) ? figureRecord : undefined;
   const empire = figure ? getEmpire(figure.empire) : null;
   const epoch = empire ? EPOCHS.find(e => e.id === empire.epochId) : null;
   const episodeId = figure ? getContentLibraryItemId('figure', figure.empire, figureId) : null;

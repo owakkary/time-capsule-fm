@@ -7,13 +7,17 @@ import { useAuth } from '@/hooks/useAuth';
 import { EPOCHS, getEmpire } from '@/types';
 import { getMomentById } from '@/lib/seed-data/moments';
 import { getContentLibraryItemId } from '@/lib/content-library';
+import { isEmpireAvailable } from '@/lib/availability';
 
 export default function MomentPage({ params }: { params: { id: string } }) {
   const momentId = params.id;
   const { user, loading, signOut } = useAuth();
   const router = useRouter();
 
-  const moment = getMomentById(momentId);
+  // Resolves to "not found" when the moment belongs to a hidden empire, so a
+  // direct link can't reach content the rest of the UI doesn't offer.
+  const momentRecord = getMomentById(momentId);
+  const moment = momentRecord && isEmpireAvailable(momentRecord.empire) ? momentRecord : undefined;
   const empire = moment ? getEmpire(moment.empire) : null;
   const epoch = empire ? EPOCHS.find(e => e.id === empire.epochId) : null;
   const episodeId = moment ? getContentLibraryItemId('moment', moment.empire, momentId) : null;

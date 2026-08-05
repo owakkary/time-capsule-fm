@@ -2,6 +2,7 @@ import { EMPIRES, EmpireId, EpochId, ContentType, UserInterestProfile, getEmpire
 import { KEY_FIGURES } from '@/lib/seed-data/figures';
 import { KEY_MOMENTS } from '@/lib/seed-data/moments';
 import { PERSPECTIVES } from '@/lib/seed-data/perspectives';
+import { isEmpireAvailable } from '@/lib/availability';
 import { getContentLibraryItemId } from '@/lib/content-library';
 
 export interface CatalogItem {
@@ -56,7 +57,8 @@ export function getContentCatalog(): CatalogItem[] {
     });
   }
 
-  return items;
+  // Never recommend an episode the UI won't let the user open.
+  return items.filter((item) => isEmpireAvailable(item.empire));
 }
 
 /**

@@ -21,6 +21,7 @@ import { KEY_MOMENTS } from '../lib/seed-data/moments';
 import { PERSPECTIVES } from '../lib/seed-data/perspectives';
 import { getVoiceId } from '../lib/voice-mapping';
 import { getContentLibraryItemId } from '../lib/content-library';
+import { AVAILABLE_EMPIRES } from '../lib/availability';
 import { QUIZ_QUESTION_COUNT } from '../lib/quiz';
 import {
   SYSTEM_PROMPT,
@@ -39,7 +40,10 @@ import {
 // Empires that get real ElevenLabs narration; every other empire's content
 // still gets a script + quiz, but is narrated client-side via the free
 // Web Speech API to keep TTS cost bounded to this fixed set.
-const FULL_AUDIO_EMPIRES: EmpireId[] = ['ancient-egypt', 'classical-greece', 'roman-empire'];
+//
+// Same list the app ships, so "has real narration" and "is visible in the UI"
+// can never drift apart — widening one widens the other.
+const FULL_AUDIO_EMPIRES: EmpireId[] = AVAILABLE_EMPIRES;
 
 const app = initializeApp({
   credential: cert({

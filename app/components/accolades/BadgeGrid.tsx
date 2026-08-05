@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { BadgeCategory, EarnedBadge } from '@/types';
-import { BADGES, getBadgesByCategory } from '@/lib/badges';
+import { EARNABLE_BADGES, getBadgesByCategory } from '@/lib/badges';
 import BadgeCard from './BadgeCard';
 
 interface BadgeGridProps {
@@ -75,7 +75,7 @@ export default function BadgeGrid({
   const categories: (BadgeCategory | 'all')[] = ['all', 'milestone', 'discovery', 'mastery', 'streak', 'special'];
 
   const filteredBadges = activeCategory === 'all'
-    ? BADGES
+    ? EARNABLE_BADGES
     : getBadgesByCategory(activeCategory);
 
   const displayBadges = showUnlockedOnly
@@ -87,7 +87,7 @@ export default function BadgeGrid({
 
   // Stats
   const totalUnlocked = earnedBadges.filter(eb => eb.isUnlocked).length;
-  const totalBadges = BADGES.length;
+  const totalBadges = EARNABLE_BADGES.length;
 
   return (
     <div className={className}>
@@ -116,7 +116,7 @@ export default function BadgeGrid({
       <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
         {categories.map((category) => {
           const isActive = activeCategory === category;
-          const categoryBadges = category === 'all' ? BADGES : getBadgesByCategory(category);
+          const categoryBadges = category === 'all' ? EARNABLE_BADGES : getBadgesByCategory(category);
           const categoryUnlocked = categoryBadges.filter(b =>
             earnedBadges.find(eb => eb.badgeId === b.id)?.isUnlocked
           ).length;
